@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gold: #e4c77a;
+  --bg: #020203;
+}
+
+body {
+  background: var(--bg);
+  color: white;
+  font-family: system-ui, sans-serif;
+}
+
+.fade {
+  animation: fadeIn 0.4s ease both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
