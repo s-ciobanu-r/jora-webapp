@@ -6,8 +6,13 @@ export default function Login() {
   const [error, setError] = useState("");
 
   async function handleLogin() {
-    const username = document.getElementById("user").value;
-    const password = document.getElementById("pass").value;
+    const username = document.getElementById("user").value.trim();
+    const password = document.getElementById("pass").value.trim();
+
+    if (!username || !password) {
+      setError("Introduceți numele și parola");
+      return;
+    }
 
     const res = await fetch("/api/login", {
       method: "POST",
@@ -15,34 +20,62 @@ export default function Login() {
       body: JSON.stringify({ username, password })
     }).then(r => r.json());
 
-    if (!res.success) return setError("Invalid credentials");
+    if (!res.success) {
+      setError("Datele de autentificare sunt invalide");
+      return;
+    }
 
-    localStorage.setItem("telegram_id", res.telegram_id);
+    // Store user info for session
+    localStorage.setItem("user_id", res.user_id);
+    localStorage.setItem("name", res.name);
+    localStorage.setItem("role", res.role);
+
+    // Redirect to dashboard
     window.location.href = "/dashboard";
   }
 
   return (
-    <main className="flex flex-col items-center p-6 fade">
-      <h1 className="text-3xl font-bold mb-4 bg-gradient-to-r from-yellow-300 to-yellow-600 text-transparent bg-clip-text">
-        JORA ACCESS
+    <main className="container-center fade">
+
+      {/* LOGO */}
+      <h1 className="text-4xl font-bold mb-10 bg-gradient-to-b from-yellow-300 to-yellow-600 text-transparent bg-clip-text drop-shadow-xl tracking-wider">
+        JORA
       </h1>
 
-      <input id="user"
-        placeholder="Username"
-        className="w-full max-w-xs p-3 rounded bg-black/40 border border-white/20 mb-2" />
+      {/* LOGIN BOX */}
+      <div className="w-full max-w-md glass-card">
+        <div className="flex flex-col gap-4">
 
-      <input id="pass"
-        type="password"
-        placeholder="Password"
-        className="w-full max-w-xs p-3 rounded bg-black/40 border border-white/20 mb-4" />
+          {/* Username */}
+          <input
+            id="user"
+            placeholder="Username"
+            className="input-glass"
+          />
 
-      <button
-        onClick={handleLogin}
-        className="w-full max-w-xs p-3 rounded bg-gradient-to-br from-yellow-300 to-yellow-600 text-black font-semibold">
-        Login
-      </button>
+          {/* Password */}
+          <input
+            id="pass"
+            type="password"
+            placeholder="Password"
+            className="input-glass"
+          />
 
-      {error && <p className="text-red-400 mt-2">{error}</p>}
+          {/* Button */}
+          <button
+            onClick={handleLogin}
+            className="btn-gold"
+          >
+            Autentificare
+          </button>
+
+          {/* Error text */}
+          {error && (
+            <p className="text-red-400 text-center mt-2">{error}</p>
+          )}
+        </div>
+      </div>
+
     </main>
   );
 }
