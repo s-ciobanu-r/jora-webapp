@@ -20,19 +20,18 @@ export default function Login() {
       body: JSON.stringify({ username, password })
     }).then(r => r.json());
 
-    if (!res.success) {
-      setError("Datele de autentificare sunt invalide");
-      return;
-    }
-    window.location.href = "/dashboard";
+   if (!res.success) {
+  setError("Datele de autentificare sunt invalide");
+  return;
+}
 
-    // Store user info for session
-    localStorage.setItem("user_id", res.user_id);
-    localStorage.setItem("name", res.name);
-    localStorage.setItem("role", res.role);
+// Store user info for session
+localStorage.setItem("user_id", res.user_id);
+localStorage.setItem("name", res.name);
+localStorage.setItem("role", res.role);
 
-    // Redirect to dashboard
-    window.location.href = "/dashboard";
+// Redirect to dashboard
+window.location.href = "/dashboard";
   }
 
   return (
