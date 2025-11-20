@@ -24,6 +24,7 @@ export default function Login() {
       setError("Datele de autentificare sunt invalide");
       return;
     }
+    window.location.href = "/dashboard";
 
     // Store user info for session
     localStorage.setItem("user_id", res.user_id);
