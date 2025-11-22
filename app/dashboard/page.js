@@ -43,11 +43,11 @@ export default function Dashboard() {
           </button>
 
           <button
-            onClick={() => window.location.href = "/chat?mode=new_contract"}
-            className="glass-btn"
-          >
-            🆕 Contract Nou
-          </button>
+  onClick={() => window.location.href = "/contract/new"}
+  className="glass-btn"
+>
+  🆕 Contract Nou
+</button>
 
           <button
             onClick={() => window.location.href = "/chat?mode=edit_contract"}
