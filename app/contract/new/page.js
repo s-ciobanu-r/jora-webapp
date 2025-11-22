@@ -1,72 +1,100 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function NewContractPage() {
-  const [step, setStep] = useState(1);
-  const [contractNumber, setContractNumber] = useState("");
-  const [date, setDate] = useState("");
-  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sessionId, setSessionId] = useState(null);
+  const [lastContract, setLastContract] = useState(null);
+  const [suggested, setSuggested] = useState(null);
+  const [manualEntryMode, setManualEntryMode] = useState(false);
+  const [manualNumber, setManualNumber] = useState("");
 
-  function next() {
-    setError("");
-    setStep(step + 1);
-  }
+  // Fetch session + last contract on page load
+  useEffect(() => {
+    async function init() {
+      const user_id = localStorage.getItem("user_id");
 
-  function back() {
-    setError("");
-    setStep(step - 1);
-  }
+      const res = await fetch("/api/new-contract", {
+        method: "POST",
+        body: JSON.stringify({ user_id })
+      }).then(r => r.json());
+
+      setSessionId(res.session_id);
+      setLastContract({
+        number: res.last_contract_number,
+        summary: res.last_contract_summary
+      });
+      setSuggested(res.suggested_contract_number);
+      setLoading(false);
+    }
+
+    init();
+  }, []);
+
+  if (loading) return <p className="text-white p-10">Se încarcă...</p>;
 
   return (
     <main className="min-h-screen flex flex-col items-center p-6 text-white bg-black">
-      <h1 className="text-3xl mb-6 font-bold bg-gradient-to-b from-yellow-300 to-yellow-600 text-transparent bg-clip-text">Contract Nou</h1>
 
-      {/* STEP 1 - Contract Number */}
-      {step === 1 && (
+      <h1 className="text-3xl mb-6 font-bold bg-gradient-to-b from-yellow-300 to-yellow-600 text-transparent bg-clip-text">
+        Contract Nou
+      </h1>
+
+      {/* STEP: Suggest Next Contract */}
+      {!manualEntryMode && (
         <div className="glass-card w-full max-w-md p-6 flex flex-col gap-4">
-          <p className="text-lg">Introduceți numărul contractului</p>
+
+          <p className="text-lg">
+            Ultimul contract: <b>{lastContract.number}</b><br />
+            <span className="text-sm text-gray-300">{lastContract.summary}</span>
+          </p>
+
+          <button
+            className="btn-gold"
+            onClick={() => {
+              window.location.href = `/contract/new/date?session=${sessionId}&number=${suggested}`;
+            }}
+          >
+            Folosește {suggested}
+          </button>
+
+          <button
+            className="glass-btn"
+            onClick={() => setManualEntryMode(true)}
+          >
+            Introdu manual
+          </button>
+        </div>
+      )}
+
+      {/* STEP: Manual Entry */}
+      {manualEntryMode && (
+        <div className="glass-card w-full max-w-md p-6 flex flex-col gap-4">
+          <p className="text-lg">Introduceți număr contract</p>
+
           <input
+            value={manualNumber}
+            onChange={(e) => setManualNumber(e.target.value)}
             className="input-glass"
-            value={contractNumber}
-            onChange={(e) => setContractNumber(e.target.value)}
-            placeholder="Ex: 2025-56"
+            placeholder="Ex: 2025-49"
           />
-          {error && <p className="text-red-400">{error}</p>}
-          <button className="btn-gold" onClick={next}>Continuă</button>
+
+          <button
+            className="btn-gold"
+            onClick={() => {
+              window.location.href = `/contract/new/date?session=${sessionId}&number=${manualNumber}`;
+            }}
+          >
+            Continuă
+          </button>
+
+          <button className="glass-btn" onClick={() => setManualEntryMode(false)}>
+            Înapoi
+          </button>
         </div>
       )}
 
-      {/* STEP 2 - Date */}
-      {step === 2 && (
-        <div className="glass-card w-full max-w-md p-6 flex flex-col gap-4">
-          <p className="text-lg">Data contract</p>
-          <input
-            type="date"
-            className="input-glass"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-          {error && <p className="text-red-400">{error}</p>}
-
-          <div className="flex gap-4">
-            <button className="glass-btn flex-1" onClick={back}>Înapoi</button>
-            <button className="btn-gold flex-1" onClick={next}>Continuă</button>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 3 - Upload or Manual */}
-      {step === 3 && (
-        <div className="glass-card w-full max-w-md p-6 flex flex-col gap-4">
-          <p className="text-lg">Selectați metoda</p>
-
-          <button className="btn-gold" onClick={() => alert("OCR Coming soon")}>Încarcă Factură (OCR)</button>
-          <button className="glass-btn" onClick={() => alert("Manual Coming soon")}>Introducere Manuală</button>
-
-          <button className="glass-btn" onClick={back}>Înapoi</button>
-        </div>
-      )}
     </main>
   );
 }
