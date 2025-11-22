@@ -7,14 +7,14 @@ export async function POST(req) {
     const res = await fetch(N8N_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify(body)
     });
 
     const data = await res.json();
-
     return Response.json(data);
 
   } catch (err) {
+    console.error("NEW CONTRACT API ERROR:", err);
     return Response.json({ error: "Server error" }, { status: 500 });
   }
 }
