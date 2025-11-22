@@ -15,6 +15,6 @@ export async function POST(req) {
 
   } catch (err) {
     console.error("NEW CONTRACT API ERROR:", err);
-    return Response.json({ error: "Server error" }, { status: 500 });
+    return Response.json({ ok: false, error: "Server error" }, { status: 500 });
   }
 }
