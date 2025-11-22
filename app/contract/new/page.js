@@ -3,98 +3,84 @@
 import { useEffect, useState } from "react";
 
 export default function NewContractPage() {
-  const [loading, setLoading] = useState(true);
-  const [sessionId, setSessionId] = useState(null);
   const [lastContract, setLastContract] = useState(null);
-  const [suggested, setSuggested] = useState(null);
-  const [manualEntryMode, setManualEntryMode] = useState(false);
-  const [manualNumber, setManualNumber] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  // Fetch session + last contract on page load
   useEffect(() => {
-    async function init() {
-      const user_id = localStorage.getItem("user_id");
+    async function loadLast() {
+      try {
+        const res = await fetch("/api/contract/last");
+        const data = await res.json();
 
-      const res = await fetch("/api/new-contract", {
-        method: "POST",
-        body: JSON.stringify({ user_id })
-      }).then(r => r.json());
-
-      setSessionId(res.session_id);
-      setLastContract({
-        number: res.last_contract_number,
-        summary: res.last_contract_summary
-      });
-      setSuggested(res.suggested_contract_number);
+        if (data?.ok) setLastContract(data.contract);
+      } catch (err) {
+        console.log("Failed loading last contract:", err);
+      }
       setLoading(false);
     }
 
-    init();
+    loadLast();
   }, []);
 
-  if (loading) return <p className="text-white p-10">Se încarcă...</p>;
+  function goNextContract() {
+    if (!lastContract) return;
+    const next = Number(lastContract.contract_number.split("-")[1]) + 1;
+    const nextNumber = `${new Date().getFullYear()}-${next}`;
+
+    window.location.href = `/contract/new/details?number=${nextNumber}`;
+  }
+
+  function goManual() {
+    window.location.href = "/contract/new/manual";
+  }
 
   return (
-    <main className="min-h-screen flex flex-col items-center p-6 text-white bg-black">
-
-      <h1 className="text-3xl mb-6 font-bold bg-gradient-to-b from-yellow-300 to-yellow-600 text-transparent bg-clip-text">
+    <main className="min-h-screen bg-black flex flex-col items-center px-6 py-12 fade">
+      <h1 className="text-4xl font-bold mb-10 bg-gradient-to-b from-yellow-300 to-yellow-600 text-transparent bg-clip-text drop-shadow-xl tracking-wider">
         Contract Nou
       </h1>
 
-      {/* STEP: Suggest Next Contract */}
-      {!manualEntryMode && (
-        <div className="glass-card w-full max-w-md p-6 flex flex-col gap-4">
+      <div className="w-full max-w-md bg-white/5 backdrop-blur-xl 
+                      border border-white/10 rounded-2xl p-6 shadow-[0_0_45px_rgba(255,215,0,0.2)]">
 
-          <p className="text-lg">
-            Ultimul contract: <b>{lastContract.number}</b><br />
-            <span className="text-sm text-gray-300">{lastContract.summary}</span>
-          </p>
+        <h2 className="text-lg text-gray-300 mb-4">
+          Ultimul contract:
+        </h2>
 
+        {loading && (
+          <p className="text-gray-400">Se încarcă...</p>
+        )}
+
+        {!loading && !lastContract && (
+          <p className="text-gray-400 mb-4">Nu există contracte.</p>
+        )}
+
+        {lastContract && (
+          <div className="mb-4 text-gray-200">
+            <p>Nr: <b>{lastContract.contract_number}</b></p>
+            <p>Data: {lastContract.date?.substring(0,10)}</p>
+            <p>Pret: {lastContract.price} EUR</p>
+          </div>
+        )}
+
+        {lastContract && (
           <button
-            className="btn-gold"
-            onClick={() => {
-              window.location.href = `/contract/new/date?session=${sessionId}&number=${suggested}`;
-            }}
+            onClick={goNextContract}
+            className="w-full py-4 bg-gradient-to-br from-yellow-300 to-yellow-600 
+                     text-black font-bold rounded-xl text-lg shadow-xl mb-4"
           >
-            Folosește {suggested}
+            Folosește următorul contract
           </button>
+        )}
 
-          <button
-            className="glass-btn"
-            onClick={() => setManualEntryMode(true)}
-          >
-            Introdu manual
-          </button>
-        </div>
-      )}
-
-      {/* STEP: Manual Entry */}
-      {manualEntryMode && (
-        <div className="glass-card w-full max-w-md p-6 flex flex-col gap-4">
-          <p className="text-lg">Introduceți număr contract</p>
-
-          <input
-            value={manualNumber}
-            onChange={(e) => setManualNumber(e.target.value)}
-            className="input-glass"
-            placeholder="Ex: 2025-49"
-          />
-
-          <button
-            className="btn-gold"
-            onClick={() => {
-              window.location.href = `/contract/new/date?session=${sessionId}&number=${manualNumber}`;
-            }}
-          >
-            Continuă
-          </button>
-
-          <button className="glass-btn" onClick={() => setManualEntryMode(false)}>
-            Înapoi
-          </button>
-        </div>
-      )}
-
+        <button
+          onClick={goManual}
+          className="w-full py-4 bg-white/10 border border-white/20 
+                   text-gray-200 font-semibold rounded-xl text-lg"
+        >
+          Introdu manual
+        </button>
+      </div>
     </main>
   );
 }
