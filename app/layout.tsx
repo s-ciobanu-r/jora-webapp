@@ -21,7 +21,7 @@ export default function RootLayout({
     <html lang="ro" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>
-          <div className="min-h-screen bg-background">
+          <div className="min-h-screen bg-background text-foreground font-sans antialiased">
             <AppHeader />
             <main className="container mx-auto px-4 py-6">
               {children}
