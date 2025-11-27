@@ -1,24 +1,26 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, CheckCircle, ChevronLeft, RefreshCw } from 'lucide-react';
-import { useContractSession } from '../../hooks/useContractSession';
-import { StepIndicator } from './StepIndicator';
-import { ContractNumberStep } from './steps/ContractNumberStep';
-import { ContractDateStep } from './steps/ContractDateStep';
-import { InputModeStep } from './steps/InputModeStep';
-import { OCRUploader } from './steps/OCRUploader';
-import { OCRReview } from './steps/OCRReview';
-import { VehicleDataStep } from './steps/VehicleDataStep';
-import { BuyerLookup } from './steps/BuyerLookup';
-import { BuyerDataStep } from './steps/BuyerDataStep';
-import { PriceStep } from './steps/PriceStep';
-import { SummaryReview } from './steps/SummaryReview';
-import { ContractComplete } from './steps/ContractComplete';
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Skeleton } from '../ui/skeleton';
+import { AlertCircle, RefreshCw } from 'lucide-react';
+import { useContractSession } from '@/store/contractSessionStore'; // Adjusted based on project structure
+import { StepIndicator } from '@/components/contract/StepIndicator';
+import { ContractNumberStep } from '@/components/contract/steps/ContractNumberStep';
+import { ContractDateStep } from '@/components/contract/steps/ContractDateStep';
+import { InputModeStep } from '@/components/contract/steps/InputModeStep';
+import { OCRUploader } from '@/components/contract/steps/OCRUploader';
+import { OCRReview } from '@/components/contract/steps/OCRReview';
+import { VehicleDataStep } from '@/components/contract/steps/VehicleDataStep';
+import { BuyerLookup } from '@/components/contract/steps/BuyerLookup';
+import { BuyerDataStep } from '@/components/contract/steps/BuyerDataStep';
+import { PriceStep } from '@/components/contract/steps/PriceStep';
+import { SummaryReview } from '@/components/contract/steps/SummaryReview';
+import { ContractComplete } from '@/components/contract/steps/ContractComplete';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import toast from 'react-hot-toast';
 
 // Map stages to their respective components
@@ -63,7 +65,7 @@ const stageComponents: Record<string, React.ComponentType<any>> = {
 };
 
 // Stage groups for progress tracking
-const stageGroups = {
+const stageGroups: Record<string, string[]> = {
   setup: ['choose_contract_number', 'contract_number_confirm', 'contract_date', 'contract_date_confirm'],
   input: ['choose_input_mode', 'choose_input_mode_confirm'],
   ocr: ['ocr_wait_file_url', 'ocr_process_file_url', 'ocr_extract_raw', 'ocr_parse_structured', 
@@ -79,8 +81,9 @@ const stageGroups = {
 };
 
 export function ContractFlow() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const params = useParams();
+  const id = params?.id as string | undefined;
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
 
@@ -106,6 +109,7 @@ export function ContractFlow() {
       // Initialize new session
       initSession();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // Handle errors
@@ -123,7 +127,7 @@ export function ContractFlow() {
       resetSession();
       initSession();
     }
-  }, [session?.session_expired]);
+  }, [session?.session_expired, resetSession, initSession]);
 
   // Get current stage component
   const StageComponent = stage ? stageComponents[stage] : null;
@@ -132,13 +136,14 @@ export function ContractFlow() {
   const getProgress = () => {
     if (!stage) return 0;
     
+    const groupKeys = Object.keys(stageGroups);
     for (const [group, stages] of Object.entries(stageGroups)) {
       const index = stages.indexOf(stage);
       if (index !== -1) {
-        const groupIndex = Object.keys(stageGroups).indexOf(group);
+        const groupIndex = groupKeys.indexOf(group);
         const groupProgress = (index + 1) / stages.length;
-        const baseProgress = (groupIndex / Object.keys(stageGroups).length) * 100;
-        const groupWeight = 100 / Object.keys(stageGroups).length;
+        const baseProgress = (groupIndex / groupKeys.length) * 100;
+        const groupWeight = 100 / groupKeys.length;
         return Math.round(baseProgress + (groupProgress * groupWeight));
       }
     }
@@ -161,7 +166,7 @@ export function ContractFlow() {
   // Loading state
   if (!session && !isError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center">
         <Card className="w-full max-w-md p-8">
           <div className="space-y-4">
             <Skeleton className="h-4 w-3/4" />
@@ -175,162 +180,155 @@ export function ContractFlow() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">
-                Jora Contract System
-              </h1>
-              {session?.session_id && (
-                <span className="ml-4 text-sm text-gray-500">
-                  Session: {session.session_id.slice(0, 8)}...
-                </span>
-              )}
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowDebug(!showDebug)}
-                className="text-gray-500"
-              >
-                Debug {showDebug ? 'Off' : 'On'}
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRestart}
-                disabled={isLoading}
-              >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Restart
-              </Button>
-            </div>
-          </div>
+    <div className="space-y-8">
+      {/* Header Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <h1 className="text-2xl font-bold tracking-tight">Contract Creation</h1>
+          {session?.session_id && (
+            <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded">
+              ID: {session.session_id.slice(0, 8)}
+            </span>
+          )}
         </div>
-      </header>
-
-      {/* Progress Bar */}
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <StepIndicator 
-            currentStage={stage || 'choose_contract_number'} 
-            progress={getProgress()}
-          />
+        
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowDebug(!showDebug)}
+            className="text-muted-foreground"
+          >
+            Debug {showDebug ? 'Off' : 'On'}
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRestart}
+            disabled={isLoading}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Restart
+          </Button>
         </div>
       </div>
 
+      {/* Progress Bar */}
+      <Card className="p-4">
+        <StepIndicator 
+          currentStage={stage || 'choose_contract_number'} 
+          progress={getProgress()}
+        />
+      </Card>
+
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Stage Area */}
-          <div className="lg:col-span-2">
-            {error && (
-              <Alert variant="destructive" className="mb-6">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Stage Area */}
+        <div className="lg:col-span-2 space-y-6">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
-            {reply && (
-              <Alert className="mb-6">
-                <AlertDescription>{reply}</AlertDescription>
-              </Alert>
-            )}
+          {reply && (
+            <Alert>
+              <AlertDescription className="whitespace-pre-line">
+                {reply}
+              </AlertDescription>
+            </Alert>
+          )}
 
-            <Card className="p-6">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={stage}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {StageComponent ? (
-                    <StageComponent
-                      stage={stage}
-                      payload={payload}
-                      options={options}
-                      onAction={sendAction}
-                      onBack={handleBack}
-                      isLoading={isLoading}
-                    />
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-gray-500">Unknown stage: {stage}</p>
-                      <Button
-                        onClick={handleRestart}
-                        className="mt-4"
-                      >
+          <Card className="p-6 relative overflow-hidden min-h-[400px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={stage || 'loading'}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="h-full"
+              >
+                {StageComponent ? (
+                  <StageComponent
+                    stage={stage}
+                    payload={payload}
+                    options={options}
+                    onAction={sendAction}
+                    onBack={handleBack}
+                    isLoading={isLoading}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                    <p className="text-muted-foreground mb-4">
+                      {stage ? `Unknown stage: ${stage}` : 'Initializing...'}
+                    </p>
+                    {stage && (
+                      <Button onClick={handleRestart} variant="destructive">
                         Restart Process
                       </Button>
-                    </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </Card>
-          </div>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            </AnimatePresence>
+          </Card>
+        </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Contract Summary */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3">Contract Summary</h3>
-              <div className="space-y-2 text-sm">
-                {payload?.contract_number && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Contract #:</span>
-                    <span className="font-medium">{payload.contract_number}</span>
-                  </div>
-                )}
-                {payload?.contract_date && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Date:</span>
-                    <span className="font-medium">{payload.contract_date}</span>
-                  </div>
-                )}
-                {payload?.brand_model && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Vehicle:</span>
-                    <span className="font-medium">{payload.brand_model}</span>
-                  </div>
-                )}
-                {payload?.buyer_name && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Buyer:</span>
-                    <span className="font-medium">{payload.buyer_name}</span>
-                  </div>
-                )}
-                {payload?.price && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Price:</span>
-                    <span className="font-medium">{payload.price} EUR</span>
-                  </div>
-                )}
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Contract Summary */}
+          <Card className="p-6">
+            <h3 className="font-semibold mb-4 text-lg">Contract Summary</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">Contract #:</span>
+                <span className="font-medium">{payload?.contract_number || '-'}</span>
               </div>
-            </Card>
-
-            {/* Help Card */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3">Need Help?</h3>
-              <div className="space-y-2 text-sm text-gray-600">
-                <p>• Type "back" to go to previous step</p>
-                <p>• Type "restart" to start over</p>
-                <p>• All data is saved automatically</p>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">Date:</span>
+                <span className="font-medium">{payload?.contract_date || '-'}</span>
               </div>
-            </Card>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">Vehicle:</span>
+                <span className="font-medium text-right max-w-[60%] truncate">
+                  {payload?.brand_model || '-'}
+                </span>
+              </div>
+              <div className="flex justify-between py-2 border-b">
+                <span className="text-muted-foreground">Buyer:</span>
+                <span className="font-medium text-right max-w-[60%] truncate">
+                  {payload?.buyer_name || '-'}
+                </span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-muted-foreground">Price:</span>
+                <span className="font-medium">
+                  {payload?.price ? `${payload.price} EUR` : '-'}
+                </span>
+              </div>
+            </div>
+          </Card>
 
-            {/* Debug Panel */}
-            {showDebug && (
-              <Card className="p-4">
-                <h3 className="font-semibold mb-3">Debug Info</h3>
-                <pre className="text-xs overflow-auto max-h-96 bg-gray-50 p-2 rounded">
+          {/* Help Card */}
+          <Card className="p-6 bg-muted/50">
+            <h3 className="font-semibold mb-3">Quick Help</h3>
+            <ul className="space-y-2 text-sm text-muted-foreground list-disc list-inside">
+              <li>Use the options buttons when available</li>
+              <li>You can go back to correct mistakes</li>
+              <li>Data is saved automatically</li>
+              <li>Files can be uploaded for OCR</li>
+            </ul>
+          </Card>
+
+          {/* Debug Panel */}
+          {showDebug && (
+            <Card className="p-4">
+              <h3 className="font-semibold mb-3">Debug Info</h3>
+              <div className="relative">
+                <pre className="text-xs overflow-auto max-h-96 bg-muted p-3 rounded border font-mono">
                   {JSON.stringify({
                     stage,
                     session_id: session?.session_id,
@@ -338,11 +336,11 @@ export function ContractFlow() {
                     options,
                   }, null, 2)}
                 </pre>
-              </Card>
-            )}
-          </div>
+              </div>
+            </Card>
+          )}
         </div>
-      </main>
+      </div>
     </div>
   );
 }
