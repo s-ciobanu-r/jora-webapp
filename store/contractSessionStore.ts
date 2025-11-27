@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { nanoid } from 'nanoid';
 
 export interface ChatMessage {
@@ -10,7 +10,7 @@ export interface ChatMessage {
   options?: { label: string; value: string }[];
 }
 
-interface ContractSessionState {
+export interface ContractSessionState {
   sessionId?: string;
   messages: ChatMessage[];
   stage?: string;
@@ -69,6 +69,7 @@ export const useContractSessionStore = create<ContractSessionState>()(
     }),
     {
       name: 'jora-session',
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         sessionId: state.sessionId,
         messages: state.messages,
