@@ -9,16 +9,23 @@ export default function HomePage() {
   const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
+    // Use replace to prevent going back to the loading screen
     if (isAuthenticated) {
-      router.push('/dashboard');
+      router.replace('/dashboard');
     } else {
-      router.push('/login');
+      router.replace('/login');
     }
   }, [isAuthenticated, router]);
 
   return (
     <div className="flex items-center justify-center min-h-[80vh]">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div 
+        className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"
+        role="status"
+        aria-label="Loading"
+      >
+        <span className="sr-only">Loading...</span>
+      </div>
     </div>
   );
 }
