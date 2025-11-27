@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import Cookies from 'js-cookie';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 // Supported languages
 export const languages = {
@@ -15,7 +14,7 @@ export type Language = keyof typeof languages;
 // Default language
 export const defaultLanguage: Language = 'ro';
 
-// Translation messages type
+// Translation messages type definition
 export interface Messages {
   common: {
     appName: string;
@@ -128,16 +127,17 @@ interface LanguageStore {
 }
 
 // Import all translation files
+// Ensure these paths exist in your project structure
 import messagesRo from '@/i18n/messages/ro/common.json';
 import messagesDe from '@/i18n/messages/de/common.json';
 import messagesEn from '@/i18n/messages/en/common.json';
 import messagesRu from '@/i18n/messages/ru/common.json';
 
 const allMessages: Record<Language, Messages> = {
-  ro: messagesRo as Messages,
-  de: messagesDe as Messages,
-  en: messagesEn as Messages,
-  ru: messagesRu as Messages,
+  ro: messagesRo as unknown as Messages,
+  de: messagesDe as unknown as Messages,
+  en: messagesEn as unknown as Messages,
+  ru: messagesRu as unknown as Messages,
 };
 
 export const useLanguageStore = create<LanguageStore>()(
@@ -146,7 +146,6 @@ export const useLanguageStore = create<LanguageStore>()(
       language: defaultLanguage,
       messages: allMessages[defaultLanguage],
       setLanguage: (lang: Language) => {
-        Cookies.set('jora-language', lang, { expires: 365 });
         set({ language: lang, messages: allMessages[lang] });
       },
       t: (key: string) => {
@@ -155,27 +154,32 @@ export const useLanguageStore = create<LanguageStore>()(
         let value: any = messages;
         
         for (const k of keys) {
-          value = value?.[k];
+          if (value && typeof value === 'object' && k in value) {
+            value = value[k as keyof typeof value];
+          } else {
+            return key; // Return key if translation not found
+          }
         }
         
-        return value || key;
+        return typeof value === 'string' ? value : key;
       },
     }),
     {
       name: 'jora-language',
-      onRehydrateStorage: () => (state) => {
-        // Check cookie on rehydration
-        const cookieLang = Cookies.get('jora-language') as Language;
-        if (cookieLang && languages[cookieLang]) {
-          state?.setLanguage(cookieLang);
-        }
-      },
+      storage: createJSONStorage(() => localStorage), // Use localStorage instead of js-cookie to avoid extra dependencies
+      skipHydration: true, // Let components handle hydration state if needed, or rely on useEffect
     }
   )
 );
 
-// Hook for using translations
+// Hook for using translations in components
 export const useTranslation = () => {
   const { t, language, setLanguage } = useLanguageStore();
+  
+  // Hydration fix for Next.js: 
+  // If we wanted to be strictly server-safe, we might return default language 
+  // until mounted, but since this is a client-side SPA replacement, 
+  // accessing the store directly is usually fine within 'use client' components.
+  
   return { t, language, setLanguage, languages };
 };
