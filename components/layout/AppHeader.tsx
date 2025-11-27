@@ -13,7 +13,7 @@ import {
   LayoutDashboard,
   ChevronDown 
 } from 'lucide-react';
-import { useTranslation, languages, Language } from '@/i18n/config';
+import { useTranslation, languages, type Language } from '@/i18n/config';
 import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,13 +33,14 @@ export function AppHeader() {
   const { user, isAuthenticated, logout } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
+  // Prevent hydration mismatch for theme and auth state
   useEffect(() => {
     setMounted(true);
   }, []);
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.replace('/login');
   };
 
   const navItems = [
@@ -60,14 +61,15 @@ export function AppHeader() {
     },
   ];
 
+  // Return a consistent skeleton during SSR/hydration to prevent mismatch
   if (!mounted) {
     return (
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-14 items-center">
           <div className="mr-4 flex">
-            <Link href="/" className="mr-6 flex items-center space-x-2">
-              <span className="font-bold text-xl">{t('common.appName')}</span>
-            </Link>
+            <div className="mr-6 flex items-center space-x-2">
+              <span className="font-bold text-xl">Jora</span>
+            </div>
           </div>
         </div>
       </header>
@@ -78,7 +80,7 @@ export function AppHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
         <div className="mr-4 flex">
-          <Link href="/" className="mr-6 flex items-center space-x-2">
+          <Link href={isAuthenticated ? "/dashboard" : "/"} className="mr-6 flex items-center space-x-2">
             <span className="font-bold text-xl">{t('common.appName')}</span>
           </Link>
           {isAuthenticated && (
@@ -97,7 +99,7 @@ export function AppHeader() {
                     )}
                   >
                     <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
+                    <span className="hidden md:inline">{item.label}</span>
                   </Link>
                 );
               })}
@@ -108,7 +110,7 @@ export function AppHeader() {
           {/* Language Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-12">
+              <Button variant="ghost" size="sm" className="w-12 px-0">
                 <Globe className="h-4 w-4" />
                 <span className="sr-only">Language</span>
               </Button>
@@ -120,7 +122,7 @@ export function AppHeader() {
                   onClick={() => setLanguage(code)}
                   className={cn(
                     'cursor-pointer',
-                    language === code && 'bg-accent'
+                    language === code && 'bg-accent font-medium'
                   )}
                 >
                   {name}
@@ -133,14 +135,11 @@ export function AppHeader() {
           <Button
             variant="ghost"
             size="sm"
-            className="w-12"
+            className="w-12 px-0"
             onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
           >
-            {theme === 'light' ? (
-              <Moon className="h-4 w-4" />
-            ) : (
-              <Sun className="h-4 w-4" />
-            )}
+            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>
           </Button>
 
@@ -148,16 +147,16 @@ export function AppHeader() {
           {isAuthenticated && user && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <span className="hidden sm:inline">{user.name}</span>
-                  <ChevronDown className="h-4 w-4" />
+                <Button variant="ghost" size="sm" className="gap-2 ml-2">
+                  <span className="hidden sm:inline font-medium">{user.name}</span>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem className="text-xs text-muted-foreground">
+                <DropdownMenuItem className="text-xs text-muted-foreground font-normal" disabled>
                   {user.role}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
                   {t('common.logout')}
                 </DropdownMenuItem>
