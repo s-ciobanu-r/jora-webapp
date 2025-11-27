@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 
-interface User {
+export interface User {
   id: number;
   name: string;
   role: string;
@@ -25,15 +25,20 @@ export const useAuthStore = create<AuthStore>()(
       },
       logout: () => {
         set({ user: null, isAuthenticated: false });
-        // Clear session storage
+        // Clear specific application state from local storage on logout
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('jora-session');
-          localStorage.removeItem('jora-messages');
+          try {
+            localStorage.removeItem('jora-session');
+            localStorage.removeItem('jora-messages');
+          } catch (error) {
+            console.error('Failed to clear local storage:', error);
+          }
         }
       },
     }),
     {
       name: 'jora-auth',
+      storage: createJSONStorage(() => localStorage),
     }
   )
 );
