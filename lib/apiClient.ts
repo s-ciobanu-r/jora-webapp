@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, AxiosError } from 'axios';
 import toast from 'react-hot-toast';
 
 // API Base URL from environment
@@ -31,23 +31,30 @@ apiClient.interceptors.request.use(
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  (error: AxiosError) => {
     if (error.response?.status === 401) {
       console.error('Authentication failed - check joraapikey');
-      toast.error('Authentication failed');
+      toast.error('Authentication failed. Please check API configuration.');
     } else if (error.response?.status === 500) {
       console.error('Server error:', error.response.data);
       toast.error('Server error occurred');
+    } else if (!error.response) {
+      // Network error
+      console.error('Network error:', error.message);
+      toast.error('Network error. Please check your connection.');
     }
     return Promise.reject(error);
   }
 );
+
+// --- Types ---
 
 // Contract Session Types
 export interface ContractSessionRequest {
   session_id?: string;
   message?: string;
   action?: string;
+  contract_id?: string;
   file_url?: string;
   choice?: string;
 }
@@ -96,7 +103,8 @@ export interface LastContractResponse {
   contract?: any;
 }
 
-// API Methods
+// --- API Methods ---
+
 const api = {
   // Contract Session State Machine
   contractSession: {
