@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, RefreshCw } from 'lucide-react';
-import { useContractSession } from '@/store/contractSessionStore'; // Adjusted based on project structure
+import { useContractSession } from '@/hooks/useContractSession';
 import { StepIndicator } from '@/components/contract/StepIndicator';
 import { ContractNumberStep } from '@/components/contract/steps/ContractNumberStep';
 import { ContractDateStep } from '@/components/contract/steps/ContractDateStep';
@@ -80,7 +80,7 @@ const stageGroups: Record<string, string[]> = {
   complete: ['final_save_contract', 'process_finished'],
 };
 
-export function ContractFlow() {
+export default function ContractFlow() {
   const params = useParams();
   const id = params?.id as string | undefined;
   const router = useRouter();
@@ -103,10 +103,8 @@ export function ContractFlow() {
   // Initialize or load session
   useEffect(() => {
     if (id) {
-      // Load existing contract
       sendAction({ action: 'load', contract_id: id });
     } else if (!session) {
-      // Initialize new session
       initSession();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,7 +148,6 @@ export function ContractFlow() {
     return 0;
   };
 
-  // Handle restart
   const handleRestart = () => {
     if (window.confirm('Are you sure you want to restart? All progress will be lost.')) {
       sendAction({ message: 'restart' });
@@ -158,12 +155,10 @@ export function ContractFlow() {
     }
   };
 
-  // Handle back navigation
   const handleBack = () => {
     sendAction({ action: 'go_back' });
   };
 
-  // Loading state
   if (!session && !isError) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -224,7 +219,6 @@ export function ContractFlow() {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Stage Area */}
         <div className="lg:col-span-2 space-y-6">
           {error && (
             <Alert variant="destructive">
@@ -279,7 +273,6 @@ export function ContractFlow() {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Contract Summary */}
           <Card className="p-6">
             <h3 className="font-semibold mb-4 text-lg">Contract Summary</h3>
             <div className="space-y-3 text-sm">
@@ -312,29 +305,12 @@ export function ContractFlow() {
             </div>
           </Card>
 
-          {/* Help Card */}
-          <Card className="p-6 bg-muted/50">
-            <h3 className="font-semibold mb-3">Quick Help</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground list-disc list-inside">
-              <li>Use the options buttons when available</li>
-              <li>You can go back to correct mistakes</li>
-              <li>Data is saved automatically</li>
-              <li>Files can be uploaded for OCR</li>
-            </ul>
-          </Card>
-
-          {/* Debug Panel */}
           {showDebug && (
             <Card className="p-4">
               <h3 className="font-semibold mb-3">Debug Info</h3>
               <div className="relative">
                 <pre className="text-xs overflow-auto max-h-96 bg-muted p-3 rounded border font-mono">
-                  {JSON.stringify({
-                    stage,
-                    session_id: session?.session_id,
-                    payload,
-                    options,
-                  }, null, 2)}
+                  {JSON.stringify({ stage, session_id: session?.session_id, payload, options }, null, 2)}
                 </pre>
               </div>
             </Card>
