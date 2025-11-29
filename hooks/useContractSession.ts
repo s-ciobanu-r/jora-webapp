@@ -1,13 +1,16 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import api, { ContractSessionRequest } from '@/lib/apiClient';
+import api from '@/lib/apiClient';
+import type { ContractSessionRequest } from '@/lib/apiClient';
 import { useContractSessionStore } from '@/store/contractSessionStore';
 import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
-import { nanoid } from 'nanoid';
+
+// Simple ID generator to avoid dependency on nanoid if not installed
+const generateId = () => Math.random().toString(36).substring(2, 9);
 
 // Types for the hook return value
-interface UseContractSessionReturn {
+export interface UseContractSessionReturn {
   session: {
     session_id?: string;
     stage?: string;
@@ -29,7 +32,7 @@ interface UseContractSessionReturn {
   resetSession: () => void;
 }
 
-interface ActionParams {
+export interface ActionParams {
   action?: string;
   message?: string;
   choice?: string;
@@ -67,7 +70,7 @@ export function useContractSession(): UseContractSessionReturn {
   }, [user]);
 
   // Helper to handle bot response
-  const handleBotResponse = (data: any) => {
+  const handleBotResponse = useCallback((data: any) => {
     // Add bot message if reply exists
     if (data.reply) {
       addMessage({
@@ -89,12 +92,12 @@ export function useContractSession(): UseContractSessionReturn {
     if (data.session_expired) {
       toast.error('Session expired');
     }
-  };
+  }, [addMessage, updateState]);
 
   // Initialize new session
   const initSessionMutation = useMutation({
     mutationFn: async () => {
-      const newSessionId = `session_${Date.now()}_${nanoid(6)}`;
+      const newSessionId = `session_${Date.now()}_${generateId()}`;
       const userId = getUserId();
       
       // Optimistic update
@@ -178,7 +181,6 @@ export function useContractSession(): UseContractSessionReturn {
       if (error.response?.status === 401) {
         toast.error('Session expired. Please log in again.');
         clearSession();
-        // Redirect logic should be handled by components or auth guard
       } else if (error.response?.status === 429) {
         toast.error('Too many requests. Please slow down.');
       } else {
@@ -192,9 +194,6 @@ export function useContractSession(): UseContractSessionReturn {
     clearSession();
     queryClient.removeQueries({ queryKey: ['contract-session'] });
   }, [clearSession, queryClient]);
-
-  // Load existing session if passed via props or URL (logic handled in component usually)
-  // This hook relies on the Store for persistence.
 
   return {
     // Session data
@@ -225,7 +224,7 @@ export function useContractSession(): UseContractSessionReturn {
   };
 }
 
-// Helper hook for specific stage actions (Facilitator)
+// Helper hook for specific stage actions
 export function useStageAction(stage: string | undefined) {
   const { sendAction, isLoading } = useContractSession();
   
