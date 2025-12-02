@@ -115,6 +115,16 @@ export interface Messages {
     totalBuyers: string;
     help: string;
     helpText: string;
+    fromLastPeriod: string;
+    startContractDesc: string;
+    manageBuyersDesc: string;
+    lastContractDesc: string;
+    noRecentContracts: string;
+    quickStart: string;
+    step1: string;
+    step2: string;
+    step3: string;
+    step4: string;
   };
 }
 
@@ -127,7 +137,6 @@ interface LanguageStore {
 }
 
 // Import all translation files
-// Ensure these paths exist in your project structure
 import messagesRo from '@/i18n/messages/ro/common.json';
 import messagesDe from '@/i18n/messages/de/common.json';
 import messagesEn from '@/i18n/messages/en/common.json';
@@ -166,8 +175,8 @@ export const useLanguageStore = create<LanguageStore>()(
     }),
     {
       name: 'jora-language',
-      storage: createJSONStorage(() => localStorage), // Use localStorage instead of js-cookie to avoid extra dependencies
-      skipHydration: true, // Let components handle hydration state if needed, or rely on useEffect
+      storage: createJSONStorage(() => localStorage),
+      skipHydration: true,
     }
   )
 );
@@ -175,11 +184,5 @@ export const useLanguageStore = create<LanguageStore>()(
 // Hook for using translations in components
 export const useTranslation = () => {
   const { t, language, setLanguage } = useLanguageStore();
-  
-  // Hydration fix for Next.js: 
-  // If we wanted to be strictly server-safe, we might return default language 
-  // until mounted, but since this is a client-side SPA replacement, 
-  // accessing the store directly is usually fine within 'use client' components.
-  
   return { t, language, setLanguage, languages };
 };
