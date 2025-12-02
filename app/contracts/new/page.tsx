@@ -92,9 +92,12 @@ export default function ContractCreationPage() {
   const { t } = useTranslation();
   const { user, isAuthenticated } = useAuthStore();
   
+  // Mounted state for hydration
+  const [mounted, setMounted] = useState(false);
+  
   // State
   const [sessionId, setSessionId] = useState<string>('');
-  const [stage, setStage] = useState<string>('choose_contract_number');
+  const [stage, setStage] = useState<string>('');
   const [payload, setPayload] = useState<any>({});
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -122,8 +125,15 @@ export default function ContractCreationPage() {
     scrollToBottom();
   }, [messages]);
   
+  // Handle mounting
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
   // Initialize session on mount
   useEffect(() => {
+    if (!mounted) return;
+    
     if (!isAuthenticated) {
       router.push('/login');
       return;
@@ -134,7 +144,7 @@ export default function ContractCreationPage() {
     
     // Start the conversation
     initializeSession(newSessionId);
-  }, [isAuthenticated, router]);
+  }, [mounted, isAuthenticated, router]);
   
   // Initialize session with n8n
   const initializeSession = async (sid: string) => {
@@ -313,7 +323,19 @@ export default function ContractCreationPage() {
   
   // Progress percentage
   const progress = stageProgress[stage] || 0;
-  const stageName = stageNames[stage] || stage.toUpperCase().replace(/_/g, ' ');
+  const stageName = stage ? (stageNames[stage] || stage.toUpperCase().replace(/_/g, ' ')) : 'INITIALIZING';
+  
+  // Show loading until mounted
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <span className="text-muted-foreground">Loading...</span>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-background pb-8">
