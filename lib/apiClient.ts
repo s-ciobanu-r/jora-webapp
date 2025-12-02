@@ -51,7 +51,7 @@ apiClient.interceptors.response.use(
 
 // Contract Session Types
 export interface ContractSessionRequest {
-  user_id: number;
+  user_id?: number;
   session_id: string;
   message?: string;
   action?: string;
