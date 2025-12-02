@@ -143,7 +143,7 @@ export default function ContractCreationPage() {
     
     try {
       const response = await api.contractSession.send({
-        user_id: user?.user_id,
+        user_id: (user as any)?.user_id || (user as any)?.id,
         session_id: sid,
         message: '',
         action: 'start',
@@ -215,7 +215,7 @@ export default function ContractCreationPage() {
     
     try {
       const response = await api.contractSession.send({
-        user_id: user?.user_id,
+        user_id: (user as any)?.user_id || (user as any)?.id,
         session_id: sessionId,
         message: msg || undefined,
         action: action || undefined,
