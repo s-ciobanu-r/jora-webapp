@@ -27,7 +27,7 @@
     "resetContract": "Vertrag zurücksetzen",
     "sessionExpired": "Sitzung abgelaufen",
     "serverError": "Serverfehler",
-    "networkError": "Netzwerkfehler",
+    "networkError": "Netzwerkfehler. Bitte Verbindung prüfen.",
     "validationError": "Validierungsfehler",
     "requiredField": "Pflichtfeld",
     "invalidEmail": "Ungültige E-Mail",
@@ -37,8 +37,8 @@
     "username": "Benutzername",
     "password": "Passwort",
     "loginButton": "Anmelden",
-    "loginError": "Anmeldung fehlgeschlagen",
-    "loginSuccess": "Erfolgreich angemeldet",
+    "loginError": "Anmeldung fehlgeschlagen. Bitte Daten prüfen.",
+    "loginSuccess": "Erfolgreich angemeldet!",
     "logoutSuccess": "Erfolgreich abgemeldet"
   },
   "contract": {
@@ -48,7 +48,7 @@
     "buyerData": "Käuferdaten",
     "price": "Preis",
     "summary": "Zusammenfassung",
-    "brandModel": "Marke/Modell",
+    "brandModel": "Marke / Modell",
     "vin": "Fahrgestellnummer (VIN)",
     "mileage": "Kilometerstand",
     "firstRegistration": "Erstzulassung",
@@ -61,9 +61,9 @@
     "userTyping": "Sie tippen...",
     "sendMessage": "Nachricht senden",
     "selectOption": "Option wählen",
-    "contractCreated": "Vertrag erfolgreich erstellt",
+    "contractCreated": "Vertrag erfolgreich erstellt!",
     "contractSaved": "Vertrag gespeichert",
-    "progressSteps": "Fortschrittsschritte",
+    "progressSteps": "Fortschritt",
     "debugMode": "Debug-Modus",
     "showPayload": "Daten anzeigen",
     "hidePayload": "Daten ausblenden"
@@ -97,6 +97,16 @@
     "contractsThisMonth": "Verträge diesen Monat",
     "totalBuyers": "Käufer gesamt",
     "help": "Hilfe",
-    "helpText": "Verwenden Sie diese Anwendung, um Autokaufverträge zu erstellen und Käufer zu verwalten."
+    "helpText": "Verwenden Sie diese Anwendung, um Autokaufverträge zu erstellen und Käufer zu verwalten.",
+    "fromLastPeriod": "gegenüber Vorperiode",
+    "startContractDesc": "Neuen Kaufvertrag erstellen",
+    "manageBuyersDesc": "Käuferdatenbank verwalten",
+    "lastContractDesc": "Letzte Verträge anzeigen",
+    "noRecentContracts": "Keine aktuellen Verträge",
+    "quickStart": "Schnellstart",
+    "step1": "Klicken Sie auf \"Neuer Vertrag\"",
+    "step2": "Folgen Sie dem Gesprächsablauf",
+    "step3": "OCR verwenden oder manuell eingeben",
+    "step4": "Bestätigen und PDF generieren"
   }
 }
