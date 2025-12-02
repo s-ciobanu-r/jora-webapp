@@ -1,322 +1,624 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, RefreshCw } from 'lucide-react';
-import { useContractSession } from '@/hooks/useContractSession';
-import { StepIndicator } from '@/components/contract/StepIndicator';
-import { ContractNumberStep } from '@/components/contract/steps/ContractNumberStep';
-import { ContractDateStep } from '@/components/contract/steps/ContractDateStep';
-import { InputModeStep } from '@/components/contract/steps/InputModeStep';
-import { OCRUploader } from '@/components/contract/steps/OCRUploader';
-import { OCRReview } from '@/components/contract/steps/OCRReview';
-import { VehicleDataStep } from '@/components/contract/steps/VehicleDataStep';
-import { BuyerLookup } from '@/components/contract/steps/BuyerLookup';
-import { BuyerDataStep } from '@/components/contract/steps/BuyerDataStep';
-import { PriceStep } from '@/components/contract/steps/PriceStep';
-import { SummaryReview } from '@/components/contract/steps/SummaryReview';
-import { ContractComplete } from '@/components/contract/steps/ContractComplete';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
-import toast from 'react-hot-toast';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/i18n/config';
+import api, { ContractSessionResponse } from '@/lib/apiClient';
+import { 
+  RotateCcw, 
+  Bug, 
+  Send, 
+  ChevronLeft,
+  FileText,
+  User,
+  Car,
+  DollarSign,
+  Calendar,
+  Hash,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Upload,
+  X
+} from 'lucide-react';
 
-// Map stages to their respective components
-const stageComponents: Record<string, React.ComponentType<any>> = {
-  'choose_contract_number': ContractNumberStep,
-  'contract_number_confirm': ContractNumberStep,
-  'contract_date': ContractDateStep,
-  'contract_date_confirm': ContractDateStep,
-  'choose_input_mode': InputModeStep,
-  'choose_input_mode_confirm': InputModeStep,
-  'ocr_wait_file_url': OCRUploader,
-  'ocr_process_file_url': OCRUploader,
-  'ocr_extract_raw': OCRUploader,
-  'ocr_parse_structured': OCRUploader,
-  'ocr_review': OCRReview,
-  'ocr_review_confirm': OCRReview,
-  'ocr_review_low_confidence': OCRReview,
-  'ocr_review_partial': OCRReview,
-  'vehicle_brand_model': VehicleDataStep,
-  'vehicle_vin': VehicleDataStep,
-  'vehicle_km': VehicleDataStep,
-  'vehicle_first_reg': VehicleDataStep,
-  'buyer_lookup_start': BuyerLookup,
-  'buyer_lookup_process': BuyerLookup,
-  'buyer_lookup_confirm_single': BuyerLookup,
-  'buyer_lookup_confirm_multi': BuyerLookup,
-  'buyer_name': BuyerDataStep,
-  'buyer_street': BuyerDataStep,
-  'buyer_city': BuyerDataStep,
-  'buyer_address': BuyerDataStep,
-  'buyer_phone': BuyerDataStep,
-  'buyer_email': BuyerDataStep,
-  'buyer_document_number': BuyerDataStep,
-  'buyer_document_authority': BuyerDataStep,
-  'price_input': PriceStep,
-  'summary_review': SummaryReview,
-  'summary_review_confirm': SummaryReview,
-  'final_confirm': SummaryReview,
-  'final_confirm_action': SummaryReview,
-  'final_save_contract': ContractComplete,
-  'process_finished': ContractComplete,
+// Generate unique session ID
+function generateSessionId(): string {
+  return `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+// Message type for chat history
+interface ChatMessage {
+  id: string;
+  role: 'bot' | 'user';
+  content: string;
+  timestamp: Date;
+  options?: { label: string; value: string }[];
+}
+
+// Stage progress mapping
+const stageProgress: Record<string, number> = {
+  'choose_contract_number': 5,
+  'contract_number_confirm': 10,
+  'contract_date': 15,
+  'contract_date_confirm': 20,
+  'vehicle_entry_method': 25,
+  'vehicle_ocr_upload': 30,
+  'vehicle_ocr_confirm': 35,
+  'vehicle_manual_brand': 40,
+  'vehicle_manual_vin': 45,
+  'vehicle_manual_km': 50,
+  'vehicle_manual_registration': 55,
+  'vehicle_confirm': 60,
+  'buyer_entry_method': 65,
+  'buyer_search': 70,
+  'buyer_select': 75,
+  'buyer_manual': 80,
+  'buyer_confirm': 85,
+  'price_entry': 90,
+  'summary_confirm': 95,
+  'complete': 100,
+  'session_expired': 0,
 };
 
-// Stage groups for progress tracking
-const stageGroups: Record<string, string[]> = {
-  setup: ['choose_contract_number', 'contract_number_confirm', 'contract_date', 'contract_date_confirm'],
-  input: ['choose_input_mode', 'choose_input_mode_confirm'],
-  ocr: ['ocr_wait_file_url', 'ocr_process_file_url', 'ocr_extract_raw', 'ocr_parse_structured', 
-        'ocr_review', 'ocr_review_confirm', 'ocr_review_low_confidence', 'ocr_review_partial'],
-  vehicle: ['vehicle_brand_model', 'vehicle_vin', 'vehicle_km', 'vehicle_first_reg'],
-  buyer: ['buyer_lookup_start', 'buyer_lookup_process', 'buyer_lookup_confirm_single', 
-          'buyer_lookup_confirm_multi', 'buyer_name', 'buyer_street', 'buyer_city', 
-          'buyer_address', 'buyer_phone', 'buyer_email', 'buyer_document_number', 
-          'buyer_document_authority'],
-  pricing: ['price_input'],
-  review: ['summary_review', 'summary_review_confirm', 'final_confirm', 'final_confirm_action'],
-  complete: ['final_save_contract', 'process_finished'],
+// Stage display names
+const stageNames: Record<string, string> = {
+  'choose_contract_number': 'CHOOSE CONTRACT NUMBER',
+  'contract_number_confirm': 'CONFIRM CONTRACT NUMBER',
+  'contract_date': 'CONTRACT DATE',
+  'contract_date_confirm': 'CONFIRM DATE',
+  'vehicle_entry_method': 'VEHICLE ENTRY',
+  'vehicle_ocr_upload': 'UPLOAD VEHICLE DOCS',
+  'vehicle_ocr_confirm': 'CONFIRM OCR DATA',
+  'vehicle_manual_brand': 'VEHICLE BRAND/MODEL',
+  'vehicle_manual_vin': 'VEHICLE VIN',
+  'vehicle_manual_km': 'VEHICLE MILEAGE',
+  'vehicle_manual_registration': 'FIRST REGISTRATION',
+  'vehicle_confirm': 'CONFIRM VEHICLE',
+  'buyer_entry_method': 'BUYER ENTRY',
+  'buyer_search': 'SEARCH BUYER',
+  'buyer_select': 'SELECT BUYER',
+  'buyer_manual': 'ENTER BUYER DATA',
+  'buyer_confirm': 'CONFIRM BUYER',
+  'price_entry': 'ENTER PRICE',
+  'summary_confirm': 'REVIEW & CONFIRM',
+  'complete': 'CONTRACT COMPLETE',
+  'session_expired': 'SESSION EXPIRED',
 };
 
-export default function ContractFlow() {
-  const params = useParams();
-  const id = params?.id as string | undefined;
+export default function ContractCreationPage() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
+  const { t } = useTranslation();
+  const { user, isAuthenticated } = useAuthStore();
+  
+  // State
+  const [sessionId, setSessionId] = useState<string>('');
+  const [stage, setStage] = useState<string>('choose_contract_number');
+  const [payload, setPayload] = useState<any>({});
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [showDebug, setShowDebug] = useState(false);
-
-  const {
-    session,
-    stage,
-    payload,
-    reply,
-    options,
-    sendAction,
-    isLoading,
-    isError,
-    initSession,
-    resetSession,
-  } = useContractSession();
-
-  // Initialize or load session
+  const [error, setError] = useState<string | null>(null);
+  const [currentOptions, setCurrentOptions] = useState<{ label: string; value: string }[]>([]);
+  
+  // File upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  
+  // Refs
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Scroll to bottom of messages
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+  
   useEffect(() => {
-    if (id) {
-      sendAction({ action: 'load', contract_id: id });
-    } else if (!session) {
-      initSession();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
-
-  // Handle errors
+    scrollToBottom();
+  }, [messages]);
+  
+  // Initialize session on mount
   useEffect(() => {
-    if (isError) {
-      setError('Connection error. Please check your network and try again.');
-      toast.error('Failed to connect to the server');
+    if (!isAuthenticated) {
+      router.push('/login');
+      return;
     }
-  }, [isError]);
-
-  // Handle session expiration
-  useEffect(() => {
-    if (session?.session_expired) {
-      toast.error('Session expired. Starting a new session...');
-      resetSession();
-      initSession();
-    }
-  }, [session?.session_expired, resetSession, initSession]);
-
-  // Get current stage component
-  const StageComponent = stage ? stageComponents[stage] : null;
-
-  // Calculate progress percentage
-  const getProgress = () => {
-    if (!stage) return 0;
     
-    const groupKeys = Object.keys(stageGroups);
-    for (const [group, stages] of Object.entries(stageGroups)) {
-      const index = stages.indexOf(stage);
-      if (index !== -1) {
-        const groupIndex = groupKeys.indexOf(group);
-        const groupProgress = (index + 1) / stages.length;
-        const baseProgress = (groupIndex / groupKeys.length) * 100;
-        const groupWeight = 100 / groupKeys.length;
-        return Math.round(baseProgress + (groupProgress * groupWeight));
-      }
+    const newSessionId = generateSessionId();
+    setSessionId(newSessionId);
+    
+    // Start the conversation
+    initializeSession(newSessionId);
+  }, [isAuthenticated, router]);
+  
+  // Initialize session with n8n
+  const initializeSession = async (sid: string) => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await api.contractSession.send({
+        user_id: user?.user_id,
+        session_id: sid,
+        message: '',
+        action: 'start',
+      });
+      
+      handleResponse(response);
+    } catch (err: any) {
+      console.error('Failed to initialize session:', err);
+      setError('Failed to connect to server. Please try again.');
+      addBotMessage('Eroare la conectarea la server. Vă rugăm să reîncercați.');
+    } finally {
+      setIsLoading(false);
     }
-    return 0;
   };
-
-  const handleRestart = () => {
-    if (window.confirm('Are you sure you want to restart? All progress will be lost.')) {
-      sendAction({ message: 'restart' });
-      toast.success('Restarted contract creation');
+  
+  // Handle n8n response
+  const handleResponse = (response: ContractSessionResponse) => {
+    setStage(response.stage);
+    setPayload(response.payload || {});
+    setCurrentOptions(response.options || []);
+    
+    if (response.reply) {
+      addBotMessage(response.reply, response.options);
+    }
+    
+    if (response.session_expired) {
+      setError('Session expired. Please start a new contract.');
     }
   };
-
-  const handleBack = () => {
-    sendAction({ action: 'go_back' });
+  
+  // Add bot message to chat
+  const addBotMessage = (content: string, options?: { label: string; value: string }[]) => {
+    const message: ChatMessage = {
+      id: `bot_${Date.now()}`,
+      role: 'bot',
+      content,
+      timestamp: new Date(),
+      options,
+    };
+    setMessages(prev => [...prev, message]);
   };
-
-  if (!session && !isError) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Card className="w-full max-w-md p-8">
-          <div className="space-y-4">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
+  
+  // Add user message to chat
+  const addUserMessage = (content: string) => {
+    const message: ChatMessage = {
+      id: `user_${Date.now()}`,
+      role: 'user',
+      content,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, message]);
+  };
+  
+  // Send message to n8n
+  const sendMessage = async (message?: string, action?: string, fileUrl?: string) => {
+    if (isLoading) return;
+    
+    const msg = message || inputValue.trim();
+    if (!msg && !action && !fileUrl) return;
+    
+    setIsLoading(true);
+    setError(null);
+    setInputValue('');
+    setCurrentOptions([]);
+    
+    if (msg && !action) {
+      addUserMessage(msg);
+    }
+    
+    try {
+      const response = await api.contractSession.send({
+        user_id: user?.user_id,
+        session_id: sessionId,
+        message: msg || undefined,
+        action: action || undefined,
+        file_url: fileUrl || undefined,
+      });
+      
+      handleResponse(response);
+    } catch (err: any) {
+      console.error('Failed to send message:', err);
+      setError('Failed to send message. Please try again.');
+      addBotMessage('Eroare la trimiterea mesajului. Vă rugăm să reîncercați.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Handle option click
+  const handleOptionClick = (value: string, label: string) => {
+    addUserMessage(label);
+    sendMessage(undefined, value);
+  };
+  
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
+  
+  // Handle file upload
+  const handleFileUpload = async () => {
+    if (!selectedFile) return;
+    
+    setIsUploading(true);
+    setUploadProgress(0);
+    
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('session_id', sessionId);
+      
+      // Simulate upload progress (in real implementation, use actual upload)
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => Math.min(prev + 10, 90));
+      }, 200);
+      
+      // For now, create a data URL as file_url
+      // In production, you'd upload to a storage service
+      const reader = new FileReader();
+      reader.onload = async () => {
+        clearInterval(progressInterval);
+        setUploadProgress(100);
+        
+        const base64Url = reader.result as string;
+        
+        // Send to n8n with file URL
+        await sendMessage(undefined, 'file_uploaded', base64Url);
+        
+        setSelectedFile(null);
+        setUploadProgress(0);
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(selectedFile);
+      
+    } catch (err) {
+      console.error('File upload failed:', err);
+      setError('File upload failed. Please try again.');
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+  
+  // Restart contract creation
+  const handleRestart = async () => {
+    const newSessionId = generateSessionId();
+    setSessionId(newSessionId);
+    setMessages([]);
+    setPayload({});
+    setCurrentOptions([]);
+    setError(null);
+    setSelectedFile(null);
+    
+    await initializeSession(newSessionId);
+  };
+  
+  // Handle key press
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+  
+  // Progress percentage
+  const progress = stageProgress[stage] || 0;
+  const stageName = stageNames[stage] || stage.toUpperCase().replace(/_/g, ' ');
+  
   return (
-    <div className="space-y-8">
-      {/* Header Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-2xl font-bold tracking-tight">Contract Creation</h1>
-          {session?.session_id && (
-            <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded">
-              ID: {session.session_id.slice(0, 8)}
-            </span>
-          )}
+    <div className="min-h-screen bg-background pb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-foreground">Contract Creation</h1>
+          <span className="px-3 py-1 text-xs font-mono bg-muted rounded-md text-muted-foreground">
+            ID: {sessionId.slice(0, 12)}...
+          </span>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
+        <div className="flex items-center gap-2">
+          <button
             onClick={() => setShowDebug(!showDebug)}
-            className="text-muted-foreground"
+            className={`px-3 py-2 text-sm rounded-lg flex items-center gap-2 transition-colors ${
+              showDebug 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-muted text-muted-foreground hover:bg-accent'
+            }`}
           >
-            Debug {showDebug ? 'Off' : 'On'}
-          </Button>
+            <Bug className="w-4 h-4" />
+            Debug {showDebug ? 'On' : 'Off'}
+          </button>
           
-          <Button
-            variant="outline"
-            size="sm"
+          <button
             onClick={handleRestart}
-            disabled={isLoading}
+            className="px-3 py-2 text-sm bg-muted text-muted-foreground hover:bg-accent rounded-lg flex items-center gap-2 transition-colors"
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RotateCcw className="w-4 h-4" />
             Restart
-          </Button>
+          </button>
         </div>
       </div>
-
+      
       {/* Progress Bar */}
-      <Card className="p-4">
-        <StepIndicator 
-          currentStage={stage || 'choose_contract_number'} 
-          progress={getProgress()}
-        />
-      </Card>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {reply && (
-            <Alert>
-              <AlertDescription className="whitespace-pre-line">
-                {reply}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <Card className="p-6 relative overflow-hidden min-h-[400px]">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={stage || 'loading'}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-                className="h-full"
-              >
-                {StageComponent ? (
-                  <StageComponent
-                    stage={stage}
-                    payload={payload}
-                    options={options}
-                    onAction={sendAction}
-                    onBack={handleBack}
-                    isLoading={isLoading}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                    <p className="text-muted-foreground mb-4">
-                      {stage ? `Unknown stage: ${stage}` : 'Initializing...'}
-                    </p>
-                    {stage && (
-                      <Button onClick={handleRestart} variant="destructive">
-                        Restart Process
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </motion.div>
-            </AnimatePresence>
-          </Card>
+      <div className="bg-card border border-border rounded-xl p-4 mb-6">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-foreground">{t('contract.progressSteps')}</span>
+          <span className="text-sm text-muted-foreground">{progress}%</span>
         </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <Card className="p-6">
-            <h3 className="font-semibold mb-4 text-lg">Contract Summary</h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Contract #:</span>
-                <span className="font-medium">{payload?.contract_number || '-'}</span>
+        <div className="h-2 bg-muted rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-primary transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="mt-2 text-xs text-muted-foreground tracking-wider uppercase">
+          {stageName}
+        </div>
+      </div>
+      
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Chat Area */}
+        <div className="lg:col-span-2 bg-card border border-border rounded-xl flex flex-col h-[600px]">
+          {/* Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {messages.length === 0 && !isLoading && (
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                Initializing...
               </div>
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Date:</span>
-                <span className="font-medium">{payload?.contract_date || '-'}</span>
+            )}
+            
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[80%] rounded-xl px-4 py-3 ${
+                    message.role === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-foreground'
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  
+                  {/* Options buttons */}
+                  {message.role === 'bot' && message.options && message.options.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {message.options.map((option) => (
+                        <button
+                          key={option.value}
+                          onClick={() => handleOptionClick(option.value, option.label)}
+                          disabled={isLoading || currentOptions.length === 0}
+                          className="px-3 py-1.5 text-sm bg-background text-foreground border border-border rounded-lg hover:bg-accent transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Vehicle:</span>
-                <span className="font-medium text-right max-w-[60%] truncate">
-                  {payload?.brand_model || '-'}
-                </span>
+            ))}
+            
+            {/* Loading indicator */}
+            {isLoading && (
+              <div className="flex justify-start">
+                <div className="bg-muted rounded-xl px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm text-muted-foreground">{t('contract.botTyping')}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex justify-between py-2 border-b">
-                <span className="text-muted-foreground">Buyer:</span>
-                <span className="font-medium text-right max-w-[60%] truncate">
-                  {payload?.buyer_name || '-'}
-                </span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-muted-foreground">Price:</span>
-                <span className="font-medium">
-                  {payload?.price ? `${payload.price} EUR` : '-'}
-                </span>
+            )}
+            
+            <div ref={messagesEndRef} />
+          </div>
+          
+          {/* File Upload Area (shown when needed) */}
+          {stage.includes('ocr') && stage.includes('upload') && (
+            <div className="border-t border-border p-4">
+              <div className="flex items-center gap-4">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,.pdf"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+                
+                {selectedFile ? (
+                  <div className="flex-1 flex items-center gap-3 bg-muted rounded-lg p-3">
+                    <FileText className="w-5 h-5 text-primary" />
+                    <span className="text-sm flex-1 truncate">{selectedFile.name}</span>
+                    <button
+                      onClick={() => setSelectedFile(null)}
+                      className="p-1 hover:bg-accent rounded"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-lg hover:border-primary transition-colors"
+                  >
+                    <Upload className="w-5 h-5" />
+                    <span className="text-sm">Click to upload document</span>
+                  </button>
+                )}
+                
+                {selectedFile && (
+                  <button
+                    onClick={handleFileUpload}
+                    disabled={isUploading}
+                    className="px-4 py-2 bg-primary text-primary-foreground rounded-lg flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {uploadProgress}%
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        Upload
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
-          </Card>
-
-          {showDebug && (
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3">Debug Info</h3>
-              <div className="relative">
-                <pre className="text-xs overflow-auto max-h-96 bg-muted p-3 rounded border font-mono">
-                  {JSON.stringify({ stage, session_id: session?.session_id, payload, options }, null, 2)}
-                </pre>
+          )}
+          
+          {/* Input Area */}
+          <div className="border-t border-border p-4">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => sendMessage('înapoi', 'go_back')}
+                disabled={isLoading || stage === 'choose_contract_number'}
+                className="p-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
+                title="Go back"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder={t('contract.sendMessage')}
+                disabled={isLoading}
+                className="flex-1 px-4 py-2 bg-muted border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:opacity-50"
+              />
+              
+              <button
+                onClick={() => sendMessage()}
+                disabled={isLoading || !inputValue.trim()}
+                className="p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Contract Summary Sidebar */}
+        <div className="bg-card border border-border rounded-xl p-5">
+          <h2 className="text-lg font-semibold text-foreground mb-4">Contract Summary</h2>
+          
+          <div className="space-y-4">
+            {/* Contract Number */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Hash className="w-4 h-4 text-primary" />
               </div>
-            </Card>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground">Contract #</p>
+                <p className="text-sm font-medium text-foreground">
+                  {payload.contract_number || '-'}
+                </p>
+              </div>
+            </div>
+            
+            {/* Date */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <Calendar className="w-4 h-4 text-blue-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground">Date</p>
+                <p className="text-sm font-medium text-foreground">
+                  {payload.contract_date || '-'}
+                </p>
+              </div>
+            </div>
+            
+            {/* Vehicle */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-orange-500/10 rounded-lg">
+                <Car className="w-4 h-4 text-orange-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground">Vehicle</p>
+                <p className="text-sm font-medium text-foreground">
+                  {payload.vehicle_brand_model || '-'}
+                </p>
+                {payload.vehicle_vin && (
+                  <p className="text-xs text-muted-foreground font-mono mt-1">
+                    VIN: {payload.vehicle_vin}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            {/* Buyer */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-green-500/10 rounded-lg">
+                <User className="w-4 h-4 text-green-500" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground">Buyer</p>
+                <p className="text-sm font-medium text-foreground">
+                  {payload.buyer_name || '-'}
+                </p>
+              </div>
+            </div>
+            
+            {/* Price */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <DollarSign className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs text-muted-foreground">Price</p>
+                <p className="text-sm font-medium text-foreground">
+                  {payload.price ? `${payload.price} RON` : '-'}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Error Display */}
+          {error && (
+            <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-destructive" />
+              <p className="text-sm text-destructive">{error}</p>
+            </div>
+          )}
+          
+          {/* Success Display */}
+          {stage === 'complete' && (
+            <div className="mt-4 p-3 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-green-500" />
+              <p className="text-sm text-green-500">Contract created successfully!</p>
+            </div>
           )}
         </div>
       </div>
+      
+      {/* Debug Panel */}
+      {showDebug && (
+        <div className="mt-6 bg-card border border-border rounded-xl p-4">
+          <h3 className="text-sm font-semibold text-foreground mb-3">Debug Payload</h3>
+          <pre className="text-xs bg-muted p-4 rounded-lg overflow-x-auto text-muted-foreground">
+            {JSON.stringify({ stage, sessionId, payload }, null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   );
 }
