@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import toast from 'react-hot-toast';
 
 // API Base URL from environment
-const API_BASE = process.env.NEXT_PUBLIC_JORA_API_BASE || 'http://localhost:5678/webhook/api';
+const API_BASE = process.env.NEXT_PUBLIC_JORA_API_BASE || 'http://localhost:5678/webhook';
 const API_KEY = process.env.NEXT_PUBLIC_JORA_FRONTEND_API_KEY;
 
 // Create axios instance with default config
@@ -51,12 +51,14 @@ apiClient.interceptors.response.use(
 
 // Contract Session Types
 export interface ContractSessionRequest {
-  session_id?: string;
+  user_id: number;
+  session_id: string;
   message?: string;
   action?: string;
-  contract_id?: string;
-  file_url?: string;
   choice?: string;
+  mode?: string;
+  history?: Array<{ role: string; content: string }>;
+  file_url?: string;
 }
 
 export interface ContractSessionResponse {
@@ -107,39 +109,42 @@ export interface LastContractResponse {
 
 const api = {
   // Contract Session State Machine
+  // Endpoint: POST /webhook/api/contract-session
   contractSession: {
     send: async (data: ContractSessionRequest): Promise<ContractSessionResponse> => {
-      const response = await apiClient.post<ContractSessionResponse>('/contract-session', data);
+      const response = await apiClient.post<ContractSessionResponse>('/api/contract-session', data);
       return response.data;
     },
   },
 
   // Buyers CRUD
+  // Endpoints: /webhook/api/buyers/*
   buyers: {
     search: async (searchTerm: string): Promise<Buyer[]> => {
-      const response = await apiClient.get<Buyer[]>('/buyers', {
+      const response = await apiClient.get<Buyer[]>('/api/buyers', {
         params: { search: searchTerm },
       });
       return response.data;
     },
     
     create: async (buyer: Omit<Buyer, 'id' | 'created_at'>): Promise<Buyer> => {
-      const response = await apiClient.post<Buyer>('/buyers', buyer);
+      const response = await apiClient.post<Buyer>('/api/buyers', buyer);
       return response.data;
     },
     
     update: async (id: string, buyer: Partial<Omit<Buyer, 'id' | 'created_at'>>): Promise<Buyer> => {
-      const response = await apiClient.patch<Buyer>(`/buyers/${id}`, buyer);
+      const response = await apiClient.patch<Buyer>(`/api/buyers/${id}`, buyer);
       return response.data;
     },
     
     getById: async (id: string): Promise<Buyer> => {
-      const response = await apiClient.get<Buyer>(`/buyers/${id}`);
+      const response = await apiClient.get<Buyer>(`/api/buyers/${id}`);
       return response.data;
     },
   },
 
   // Authentication
+  // Endpoint: POST /webhook/jora-login
   auth: {
     login: async (credentials: LoginRequest): Promise<LoginResponse> => {
       const response = await apiClient.post<LoginResponse>('/jora-login', credentials);
@@ -148,6 +153,7 @@ const api = {
   },
 
   // Last Contract
+  // Endpoint: GET /webhook/jora-last-contract
   contracts: {
     getLast: async (): Promise<LastContractResponse> => {
       const response = await apiClient.get<LastContractResponse>('/jora-last-contract');
