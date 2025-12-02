@@ -47,30 +47,41 @@ export default function DashboardPage() {
       value: '3',
       icon: Calendar,
       change: '+2',
-      changeType: 'positive' as const,
+      changeType: 'positive',
     },
     {
       title: t('dashboard.contractsThisWeek'),
       value: '12',
       icon: TrendingUp,
       change: '+15%',
-      changeType: 'positive' as const,
+      changeType: 'positive',
     },
     {
       title: t('dashboard.contractsThisMonth'),
       value: '47',
       icon: BarChart3,
       change: '+8%',
-      changeType: 'positive' as const,
+      changeType: 'positive',
     },
     {
       title: t('dashboard.totalBuyers'),
       value: '234',
       icon: Users,
       change: '+12',
-      changeType: 'neutral' as const,
+      changeType: 'neutral',
     },
-  ];
+  ] as const;
+
+  const getChangeColor = (type: string) => {
+    switch (type) {
+      case 'positive':
+        return 'text-green-500';
+      case 'negative':
+        return 'text-red-500';
+      default:
+        return 'text-muted-foreground';
+    }
+  };
 
   return (
     <div className="space-y-6 pb-8">
@@ -108,13 +119,7 @@ export default function DashboardPage() {
               </div>
               <div className="mt-3 sm:mt-4">
                 <span className="text-2xl font-bold sm:text-3xl">{stat.value}</span>
-                <p className={`mt-1 text-xs ${
-                  stat.changeType === 'positive' 
-                    ? 'text-green-500' 
-                    : stat.changeType === 'negative' 
-                    ? 'text-red-500' 
-                    : 'text-muted-foreground'
-                }`}>
+                <p className={`mt-1 text-xs ${getChangeColor(stat.changeType)}`}>
                   {stat.change} {t('dashboard.fromLastPeriod')}
                 </p>
               </div>
