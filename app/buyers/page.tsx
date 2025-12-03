@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
@@ -10,9 +10,7 @@ import {
   Plus, 
   Search, 
   Edit, 
-  Trash2, 
   Loader2,
-  X,
   User,
   Mail,
   Phone,
@@ -43,7 +41,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { debounce } from '@/lib/utils';
-import { formatDate } from '@/lib/utils';
 
 // Buyer form schema
 const buyerSchema = z.object({
@@ -77,6 +74,19 @@ export default function BuyersPage() {
     }
   }, [isAuthenticated, router]);
 
+  // Debounced search (optimized)
+  const handleSearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        if (value.length >= 2) {
+          setSearchTerm(value);
+        } else {
+          setSearchTerm(''); // avoid unnecessary GET
+        }
+      }, 500), // slower debounce to reduce n8n spam
+    []
+  );
+
   // Form setup
   const {
     register,
@@ -88,17 +98,16 @@ export default function BuyersPage() {
     resolver: zodResolver(buyerSchema),
   });
 
-  // Search buyers query
+  // Search buyers query (fully optimized)
   const { data: buyers, isLoading } = useQuery({
     queryKey: ['buyers', searchTerm],
     queryFn: () => api.buyers.search(searchTerm),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !isAddOpen && !editingBuyer && searchTerm.length >= 2,
+    refetchOnWindowFocus: false, // huge savings
+    refetchOnReconnect: false,   // prevents spam on network switching
+    staleTime: 1000 * 60 * 5,    // keep results cached for 5 minutes
+    gcTime: 1000 * 60 * 30,      // keep in memory 30 minutes
   });
-
-  // Debounced search
-  const handleSearch = debounce((value: string) => {
-    setSearchTerm(value);
-  }, 300);
 
   // Create buyer mutation
   const createMutation = useMutation({
@@ -107,7 +116,11 @@ export default function BuyersPage() {
       toast.success(t('buyers.buyerAdded'));
       setIsAddOpen(false);
       reset();
-      queryClient.invalidateQueries({ queryKey: ['buyers'] });
+
+      // Delay refresh so POST appears clearly and avoids GET override
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['buyers'] });
+      }, 500);
     },
     onError: (error) => {
       console.error('Create buyer error:', error);
@@ -123,7 +136,10 @@ export default function BuyersPage() {
       toast.success(t('buyers.buyerUpdated'));
       setEditingBuyer(null);
       reset();
-      queryClient.invalidateQueries({ queryKey: ['buyers'] });
+
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['buyers'] });
+      }, 500);
     },
     onError: (error) => {
       console.error('Update buyer error:', error);
@@ -133,11 +149,10 @@ export default function BuyersPage() {
 
   // Handle form submit
   const onSubmit = (data: BuyerFormData) => {
-    // Clean up empty email
     if (data.email === '') {
       data.email = undefined;
     }
-    
+
     if (editingBuyer) {
       updateMutation.mutate({ id: editingBuyer.id, data });
     } else {
@@ -148,9 +163,9 @@ export default function BuyersPage() {
   // Open edit dialog
   const handleEdit = (buyer: Buyer) => {
     setEditingBuyer(buyer);
-    Object.keys(buyer).forEach((key) => {
+    Object.entries(buyer).forEach(([key, value]) => {
       if (key !== 'id' && key !== 'created_at') {
-        setValue(key as keyof BuyerFormData, buyer[key as keyof Buyer] || '');
+        setValue(key as keyof BuyerFormData, (value as string) || '');
       }
     });
   };
@@ -162,9 +177,7 @@ export default function BuyersPage() {
     reset();
   };
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (!isAuthenticated) return null;
 
   return (
     <div className="space-y-6">
@@ -222,6 +235,7 @@ export default function BuyersPage() {
                         {buyer.full_name}
                       </div>
                     </TableCell>
+
                     <TableCell>
                       {buyer.city && (
                         <div className="flex items-center gap-2">
@@ -230,6 +244,7 @@ export default function BuyersPage() {
                         </div>
                       )}
                     </TableCell>
+
                     <TableCell>
                       {buyer.phone && (
                         <div className="flex items-center gap-2">
@@ -238,6 +253,7 @@ export default function BuyersPage() {
                         </div>
                       )}
                     </TableCell>
+
                     <TableCell>
                       {buyer.email && (
                         <div className="flex items-center gap-2">
@@ -246,6 +262,7 @@ export default function BuyersPage() {
                         </div>
                       )}
                     </TableCell>
+
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
@@ -281,8 +298,10 @@ export default function BuyersPage() {
                 : 'Add a new buyer to the database'}
             </DialogDescription>
           </DialogHeader>
+
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="space-y-4">
+
               <div>
                 <Label htmlFor="full_name">{t('buyers.name')} *</Label>
                 <Input
@@ -300,58 +319,33 @@ export default function BuyersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="street">{t('buyers.street')}</Label>
-                  <Input
-                    id="street"
-                    {...register('street')}
-                    placeholder="Main Street"
-                  />
+                  <Input id="street" {...register('street')} />
                 </div>
                 <div>
                   <Label htmlFor="street_no">{t('buyers.streetNumber')}</Label>
-                  <Input
-                    id="street_no"
-                    {...register('street_no')}
-                    placeholder="123"
-                  />
+                  <Input id="street_no" {...register('street_no')} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="zip">{t('buyers.zipCode')}</Label>
-                  <Input
-                    id="zip"
-                    {...register('zip')}
-                    placeholder="12345"
-                  />
+                  <Input id="zip" {...register('zip')} />
                 </div>
                 <div>
                   <Label htmlFor="city">{t('buyers.city')}</Label>
-                  <Input
-                    id="city"
-                    {...register('city')}
-                    placeholder="Munich"
-                  />
+                  <Input id="city" {...register('city')} />
                 </div>
               </div>
 
               <div>
                 <Label htmlFor="phone">{t('buyers.phone')}</Label>
-                <Input
-                  id="phone"
-                  {...register('phone')}
-                  placeholder="+49 123 456789"
-                />
+                <Input id="phone" {...register('phone')} />
               </div>
 
               <div>
                 <Label htmlFor="email">{t('buyers.email')}</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  {...register('email')}
-                  placeholder="john@example.com"
-                />
+                <Input id="email" {...register('email')} type="email" />
                 {errors.email && (
                   <p className="text-sm text-destructive mt-1">
                     {errors.email.message}
@@ -362,32 +356,26 @@ export default function BuyersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="document_number">{t('buyers.documentNumber')}</Label>
-                  <Input
-                    id="document_number"
-                    {...register('document_number')}
-                    placeholder="AB123456"
-                  />
+                  <Input id="document_number" {...register('document_number')} />
                 </div>
                 <div>
                   <Label htmlFor="document_authority">{t('buyers.documentAuthority')}</Label>
-                  <Input
-                    id="document_authority"
-                    {...register('document_authority')}
-                    placeholder="City Hall"
-                  />
+                  <Input id="document_authority" {...register('document_authority')} />
                 </div>
               </div>
+
             </div>
 
             <DialogFooter className="mt-6">
               <Button type="button" variant="outline" onClick={handleCloseDialog}>
                 {t('common.cancel')}
               </Button>
+
               <Button
                 type="submit"
                 disabled={createMutation.isPending || updateMutation.isPending}
               >
-                {(createMutation.isPending || updateMutation.isPending) ? (
+                {createMutation.isPending || updateMutation.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {t('common.loading')}
@@ -396,6 +384,7 @@ export default function BuyersPage() {
                   t('common.save')
                 )}
               </Button>
+
             </DialogFooter>
           </form>
         </DialogContent>
