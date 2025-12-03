@@ -1,55 +1,54 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosError } from 'axios';
 import toast from 'react-hot-toast';
 
 // API Base URL from environment
 const API_BASE = process.env.NEXT_PUBLIC_JORA_API_BASE || 'http://localhost:5678/webhook';
 const API_KEY = process.env.NEXT_PUBLIC_JORA_FRONTEND_API_KEY;
 
-// Create axios instance with default config
-const apiClient: AxiosInstance = axios.create({
-  baseURL: API_BASE,
+// -------------------------
+// CLIENT 1: SEARCH (GET ONLY)
+// Uses the /webhook prefix
+// -------------------------
+const apiSearch = axios.create({
+  baseURL: API_BASE, // this includes /webhook
   timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// Request interceptor to add joraapikey header to all requests
-apiClient.interceptors.request.use(
-  (config) => {
-    // CRITICAL: Add joraapikey header to all requests
-    if (API_KEY) {
-      config.headers['joraapikey'] = API_KEY;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+apiSearch.interceptors.request.use((config) => {
+  if (API_KEY) config.headers['joraapikey'] = API_KEY;
+  return config;
+});
 
-// Response interceptor for error handling
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      console.error('Authentication failed - check joraapikey');
-      toast.error('Authentication failed. Please check API configuration.');
-    } else if (error.response?.status === 500) {
-      console.error('Server error:', error.response.data);
-      toast.error('Server error occurred');
-    } else if (!error.response) {
-      // Network error
-      console.error('Network error:', error.message);
-      toast.error('Network error. Please check your connection.');
-    }
-    return Promise.reject(error);
+// -------------------------
+// CLIENT 2: CRUD (POST / PATCH / GET BY ID)
+// MUST NOT use /webhook prefix
+// -------------------------
+const apiCrud = axios.create({
+  baseURL: API_BASE.replace('/webhook', ''), // remove /webhook
+  timeout: 30000,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+apiCrud.interceptors.request.use((config) => {
+  if (API_KEY) config.headers['joraapikey'] = API_KEY;
+  return config;
+});
+
+// Global error handler
+const handleError = (error: AxiosError) => {
+  if (!error.response) {
+    toast.error("Network error. Please check your connection.");
+  } else if (error.response.status === 401) {
+    toast.error("Authentication failed");
+  } else {
+    toast.error("Server error");
   }
-);
+  return Promise.reject(error);
+};
 
 // --- Types ---
 
-// Contract Session Types
 export interface ContractSessionRequest {
   user_id?: number;
   session_id: string;
@@ -71,7 +70,6 @@ export interface ContractSessionResponse {
   session_expired?: boolean;
 }
 
-// Buyer Types
 export interface Buyer {
   id: string;
   full_name: string;
@@ -86,7 +84,6 @@ export interface Buyer {
   created_at?: string;
 }
 
-// Login Types
 export interface LoginRequest {
   username: string;
   password: string;
@@ -99,7 +96,6 @@ export interface LoginResponse {
   role?: string;
 }
 
-// Last Contract Types
 export interface LastContractResponse {
   ok: boolean;
   contract?: any;
@@ -108,58 +104,80 @@ export interface LastContractResponse {
 // --- API Methods ---
 
 const api = {
-  // Contract Session State Machine
-  // Endpoint: POST /webhook/api/contract-session
   contractSession: {
     send: async (data: ContractSessionRequest): Promise<ContractSessionResponse> => {
-      const response = await apiClient.post<ContractSessionResponse>('/api/contract-session', data);
-      return response.data;
+      try {
+        const response = await apiSearch.post('/api/contract-session', data);
+        return response.data;
+      } catch (err) {
+        return handleError(err as AxiosError);
+      }
     },
   },
 
-  // Buyers CRUD
-  // Endpoints: /webhook/api/buyers/*
   buyers: {
+    // GET (SEARCH) — uses /webhook/api/buyers
     search: async (searchTerm: string): Promise<Buyer[]> => {
-  const response = await apiClient.get('/api/buyers', {
-    params: { search: searchTerm },
-  });
+      try {
+        const response = await apiSearch.get('/api/buyers', {
+          params: { search: searchTerm }
+        });
+        return response.data.buyers || []; // n8n returns {buyers: []}
+      } catch (err) {
+        return handleError(err as AxiosError);
+      }
+    },
 
-  // FIX: unwrap { buyers: [...] }
-  return response.data.buyers || [];
-},
-    
+    // POST (CREATE) — uses /api/buyers (NO /webhook)
     create: async (buyer: Omit<Buyer, 'id' | 'created_at'>): Promise<Buyer> => {
-      const response = await apiClient.post<Buyer>('/api/buyers', buyer);
-      return response.data;
+      try {
+        const response = await apiCrud.post('/api/buyers', buyer);
+        return response.data.data || response.data;
+      } catch (err) {
+        return handleError(err as AxiosError);
+      }
     },
-    
-    update: async (id: string, buyer: Partial<Omit<Buyer, 'id' | 'created_at'>>): Promise<Buyer> => {
-      const response = await apiClient.patch<Buyer>(`/api/buyers/${id}`, buyer);
-      return response.data;
+
+    // PATCH (UPDATE)
+    update: async (id: string, buyer: Partial<Buyer>): Promise<Buyer> => {
+      try {
+        const response = await apiCrud.patch(`/api/buyers/${id}`, buyer);
+        return response.data.data || response.data;
+      } catch (err) {
+        return handleError(err as AxiosError);
+      }
     },
-    
+
+    // GET by ID
     getById: async (id: string): Promise<Buyer> => {
-      const response = await apiClient.get<Buyer>(`/api/buyers/${id}`);
-      return response.data;
+      try {
+        const response = await apiCrud.get(`/api/buyers/${id}`);
+        return response.data.data || response.data;
+      } catch (err) {
+        return handleError(err as AxiosError);
+      }
     },
   },
 
-  // Authentication
-  // Endpoint: POST /webhook/jora-login
   auth: {
     login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-      const response = await apiClient.post<LoginResponse>('/jora-login', credentials);
-      return response.data;
+      try {
+        const response = await apiSearch.post('/jora-login', credentials);
+        return response.data;
+      } catch (err) {
+        return handleError(err as AxiosError);
+      }
     },
   },
 
-  // Last Contract
-  // Endpoint: GET /webhook/jora-last-contract
   contracts: {
     getLast: async (): Promise<LastContractResponse> => {
-      const response = await apiClient.get<LastContractResponse>('/jora-last-contract');
-      return response.data;
+      try {
+        const response = await apiSearch.get('/jora-last-contract');
+        return response.data;
+      } catch (err) {
+        return handleError(err as AxiosError);
+      }
     },
   },
 };
