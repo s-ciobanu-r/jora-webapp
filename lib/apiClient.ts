@@ -121,11 +121,13 @@ const api = {
   // Endpoints: /webhook/api/buyers/*
   buyers: {
     search: async (searchTerm: string): Promise<Buyer[]> => {
-      const response = await apiClient.get<Buyer[]>('/api/buyers', {
-        params: { search: searchTerm },
-      });
-      return response.data;
-    },
+  const response = await apiClient.get('/api/buyers', {
+    params: { search: searchTerm },
+  });
+
+  // FIX: unwrap { buyers: [...] }
+  return response.data.buyers || [];
+},
     
     create: async (buyer: Omit<Buyer, 'id' | 'created_at'>): Promise<Buyer> => {
       const response = await apiClient.post<Buyer>('/api/buyers', buyer);
