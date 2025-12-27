@@ -1,0 +1,92 @@
+{
+  "steps": {
+    "contractInfo": "Informații contract",
+    "vehicle": "Vehicul",
+    "buyer": "Cumpărător",
+    "price": "Preț",
+    "review": "Revizuire"
+  },
+
+  "fields": {
+    "contractNumber": "Număr contract",
+    "contractDate": "Data contractului",
+    "brandModel": "Marcă / Model",
+    "vin": "VIN",
+    "km": "Kilometraj (km)",
+    "firstRegistration": "Prima înmatriculare",
+    "fullName": "Nume complet",
+    "street": "Stradă",
+    "streetNo": "Număr",
+    "zip": "Cod poștal",
+    "city": "Oraș",
+    "phone": "Telefon",
+    "email": "Email",
+    "documentNumber": "Număr document",
+    "documentAuthority": "Autoritate emitentă",
+    "price": "Preț de vânzare",
+    "address": "Adresă"
+  },
+
+  "actions": {
+    "next": "Înainte",
+    "back": "Înapoi",
+    "edit": "Editează",
+    "select": "Selectează",
+    "accept": "Acceptă",
+    "retry": "Reîncearcă",
+    "generatePdf": "Generează PDF-ul contractului",
+    "downloadPdf": "Descarcă PDF",
+    "createAnother": "Creează un alt contract",
+    "goToContracts": "Mergi la contracte"
+  },
+
+  "vehicle": {
+    "manualEntry": "Introducere manuală",
+    "ocrUpload": "Încarcă document (OCR)",
+    "ocrTitle": "Extrage datele vehiculului din document",
+    "ocrProcessing": "Se procesează documentul…"
+  },
+
+  "buyer": {
+    "searchLabel": "Caută cumpărător existent",
+    "searchPlaceholder": "Nume, telefon, email…",
+    "searching": "Se caută…",
+    "noResults": "Nu s-au găsit cumpărători",
+    "createNew": "Creează cumpărător nou"
+  },
+
+  "price": {
+    "formatted": "Formatat"
+  },
+
+  "ocr": {
+    "confidence": {
+      "high": "încredere ridicată",
+      "medium": "încredere medie",
+      "low": "încredere scăzută"
+    }
+  },
+
+  "success": {
+    "title": "Contract creat cu succes",
+    "subtitle": "PDF-ul contractului este gata."
+  },
+
+  "errors": {
+    "required": "Acest câmp este obligatoriu",
+    "invalidDate": "Dată invalidă",
+    "invalidVinLength": "VIN-ul trebuie să aibă 17 caractere",
+    "invalidVinFormat": "Format VIN invalid",
+    "invalidNumber": "Număr invalid",
+    "mustBePositive": "Trebuie să fie o valoare pozitivă",
+    "mustBeInteger": "Trebuie să fie un număr întreg",
+    "tooLarge": "Valoarea este prea mare",
+    "invalidEmail": "Adresă de email invalidă",
+    "searchFailed": "Căutarea a eșuat",
+    "ocrUploadFailed": "Încărcarea fișierului a eșuat",
+    "ocrExtractFailed": "Extragerea OCR a eșuat",
+    "ocrFailed": "OCR a eșuat",
+    "network": "Eroare de rețea",
+    "unknown": "Eroare necunoscută"
+  }
+}
