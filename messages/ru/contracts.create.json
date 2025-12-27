@@ -1,0 +1,92 @@
+{
+  "steps": {
+    "contractInfo": "Информация о договоре",
+    "vehicle": "Автомобиль",
+    "buyer": "Покупатель",
+    "price": "Цена",
+    "review": "Проверка"
+  },
+
+  "fields": {
+    "contractNumber": "Номер договора",
+    "contractDate": "Дата договора",
+    "brandModel": "Марка / Модель",
+    "vin": "VIN",
+    "km": "Пробег (км)",
+    "firstRegistration": "Первая регистрация",
+    "fullName": "Полное имя",
+    "street": "Улица",
+    "streetNo": "Номер дома",
+    "zip": "Почтовый индекс",
+    "city": "Город",
+    "phone": "Телефон",
+    "email": "Email",
+    "documentNumber": "Номер документа",
+    "documentAuthority": "Орган, выдавший документ",
+    "price": "Цена продажи",
+    "address": "Адрес"
+  },
+
+  "actions": {
+    "next": "Далее",
+    "back": "Назад",
+    "edit": "Редактировать",
+    "select": "Выбрать",
+    "accept": "Принять",
+    "retry": "Повторить",
+    "generatePdf": "Создать PDF договора",
+    "downloadPdf": "Скачать PDF",
+    "createAnother": "Создать другой договор",
+    "goToContracts": "К договорам"
+  },
+
+  "vehicle": {
+    "manualEntry": "Ручной ввод",
+    "ocrUpload": "Загрузить документ (OCR)",
+    "ocrTitle": "Извлечь данные автомобиля из документа",
+    "ocrProcessing": "Обработка документа…"
+  },
+
+  "buyer": {
+    "searchLabel": "Поиск существующего покупателя",
+    "searchPlaceholder": "Имя, телефон, email…",
+    "searching": "Поиск…",
+    "noResults": "Покупатели не найдены",
+    "createNew": "Создать нового покупателя"
+  },
+
+  "price": {
+    "formatted": "Форматировано"
+  },
+
+  "ocr": {
+    "confidence": {
+      "high": "высокая уверенность",
+      "medium": "средняя уверенность",
+      "low": "низкая уверенность"
+    }
+  },
+
+  "success": {
+    "title": "Договор успешно создан",
+    "subtitle": "PDF договора готов."
+  },
+
+  "errors": {
+    "required": "Это поле обязательно",
+    "invalidDate": "Неверная дата",
+    "invalidVinLength": "VIN должен состоять из 17 символов",
+    "invalidVinFormat": "Неверный формат VIN",
+    "invalidNumber": "Неверное число",
+    "mustBePositive": "Должно быть положительным значением",
+    "mustBeInteger": "Должно быть целым числом",
+    "tooLarge": "Значение слишком большое",
+    "invalidEmail": "Неверный адрес электронной почты",
+    "searchFailed": "Ошибка поиска",
+    "ocrUploadFailed": "Ошибка загрузки файла",
+    "ocrExtractFailed": "Ошибка OCR-распознавания",
+    "ocrFailed": "Ошибка OCR",
+    "network": "Сетевая ошибка",
+    "unknown": "Неизвестная ошибка"
+  }
+}
