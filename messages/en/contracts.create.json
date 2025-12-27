@@ -1,0 +1,92 @@
+{
+  "steps": {
+    "contractInfo": "Contract information",
+    "vehicle": "Vehicle",
+    "buyer": "Buyer",
+    "price": "Price",
+    "review": "Review"
+  },
+
+  "fields": {
+    "contractNumber": "Contract number",
+    "contractDate": "Contract date",
+    "brandModel": "Brand / Model",
+    "vin": "VIN",
+    "km": "Mileage (km)",
+    "firstRegistration": "First registration",
+    "fullName": "Full name",
+    "street": "Street",
+    "streetNo": "Street number",
+    "zip": "ZIP code",
+    "city": "City",
+    "phone": "Phone",
+    "email": "Email",
+    "documentNumber": "Document number",
+    "documentAuthority": "Issuing authority",
+    "price": "Sale price",
+    "address": "Address"
+  },
+
+  "actions": {
+    "next": "Next",
+    "back": "Back",
+    "edit": "Edit",
+    "select": "Select",
+    "accept": "Accept",
+    "retry": "Retry",
+    "generatePdf": "Generate contract PDF",
+    "downloadPdf": "Download PDF",
+    "createAnother": "Create another contract",
+    "goToContracts": "Go to contracts"
+  },
+
+  "vehicle": {
+    "manualEntry": "Manual entry",
+    "ocrUpload": "Upload document (OCR)",
+    "ocrTitle": "Extract vehicle data from document",
+    "ocrProcessing": "Processing document…"
+  },
+
+  "buyer": {
+    "searchLabel": "Search existing buyer",
+    "searchPlaceholder": "Name, phone, email…",
+    "searching": "Searching…",
+    "noResults": "No buyers found",
+    "createNew": "Create new buyer"
+  },
+
+  "price": {
+    "formatted": "Formatted"
+  },
+
+  "ocr": {
+    "confidence": {
+      "high": "high confidence",
+      "medium": "medium confidence",
+      "low": "low confidence"
+    }
+  },
+
+  "success": {
+    "title": "Contract successfully created",
+    "subtitle": "Your contract PDF is ready."
+  },
+
+  "errors": {
+    "required": "This field is required",
+    "invalidDate": "Invalid date",
+    "invalidVinLength": "VIN must be 17 characters",
+    "invalidVinFormat": "Invalid VIN format",
+    "invalidNumber": "Invalid number",
+    "mustBePositive": "Must be a positive value",
+    "mustBeInteger": "Must be an integer",
+    "tooLarge": "Value is too large",
+    "invalidEmail": "Invalid email address",
+    "searchFailed": "Search failed",
+    "ocrUploadFailed": "File upload failed",
+    "ocrExtractFailed": "OCR extraction failed",
+    "ocrFailed": "OCR failed",
+    "network": "Network error",
+    "unknown": "Unknown error"
+  }
+}
