@@ -1,0 +1,92 @@
+{
+  "steps": {
+    "contractInfo": "Vertragsinformationen",
+    "vehicle": "Fahrzeug",
+    "buyer": "Käufer",
+    "price": "Preis",
+    "review": "Überprüfung"
+  },
+
+  "fields": {
+    "contractNumber": "Vertragsnummer",
+    "contractDate": "Vertragsdatum",
+    "brandModel": "Marke / Modell",
+    "vin": "FIN",
+    "km": "Kilometerstand (km)",
+    "firstRegistration": "Erstzulassung",
+    "fullName": "Vollständiger Name",
+    "street": "Straße",
+    "streetNo": "Hausnummer",
+    "zip": "Postleitzahl",
+    "city": "Stadt",
+    "phone": "Telefon",
+    "email": "E-Mail",
+    "documentNumber": "Dokumentennummer",
+    "documentAuthority": "Ausstellende Behörde",
+    "price": "Verkaufspreis",
+    "address": "Adresse"
+  },
+
+  "actions": {
+    "next": "Weiter",
+    "back": "Zurück",
+    "edit": "Bearbeiten",
+    "select": "Auswählen",
+    "accept": "Akzeptieren",
+    "retry": "Erneut versuchen",
+    "generatePdf": "Vertrags-PDF erstellen",
+    "downloadPdf": "PDF herunterladen",
+    "createAnother": "Weiteren Vertrag erstellen",
+    "goToContracts": "Zu den Verträgen"
+  },
+
+  "vehicle": {
+    "manualEntry": "Manuelle Eingabe",
+    "ocrUpload": "Dokument hochladen (OCR)",
+    "ocrTitle": "Fahrzeugdaten aus Dokument extrahieren",
+    "ocrProcessing": "Dokument wird verarbeitet…"
+  },
+
+  "buyer": {
+    "searchLabel": "Bestehenden Käufer suchen",
+    "searchPlaceholder": "Name, Telefon, E-Mail…",
+    "searching": "Suche läuft…",
+    "noResults": "Keine Käufer gefunden",
+    "createNew": "Neuen Käufer erstellen"
+  },
+
+  "price": {
+    "formatted": "Formatiert"
+  },
+
+  "ocr": {
+    "confidence": {
+      "high": "hohe Sicherheit",
+      "medium": "mittlere Sicherheit",
+      "low": "geringe Sicherheit"
+    }
+  },
+
+  "success": {
+    "title": "Vertrag erfolgreich erstellt",
+    "subtitle": "Ihr Vertrags-PDF ist bereit."
+  },
+
+  "errors": {
+    "required": "Dieses Feld ist erforderlich",
+    "invalidDate": "Ungültiges Datum",
+    "invalidVinLength": "FIN muss 17 Zeichen haben",
+    "invalidVinFormat": "Ungültiges FIN-Format",
+    "invalidNumber": "Ungültige Zahl",
+    "mustBePositive": "Muss ein positiver Wert sein",
+    "mustBeInteger": "Muss eine ganze Zahl sein",
+    "tooLarge": "Wert ist zu groß",
+    "invalidEmail": "Ungültige E-Mail-Adresse",
+    "searchFailed": "Suche fehlgeschlagen",
+    "ocrUploadFailed": "Datei-Upload fehlgeschlagen",
+    "ocrExtractFailed": "OCR-Extraktion fehlgeschlagen",
+    "ocrFailed": "OCR fehlgeschlagen",
+    "network": "Netzwerkfehler",
+    "unknown": "Unbekannter Fehler"
+  }
+}
